@@ -1,14 +1,18 @@
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import time
 
-class Agent:
+from agent import print_token_usage
+
+# NO SYSTEM PROMPT, NO AGENT
+class TTLFlatLLMCall:
     def __init__(self):
         load_dotenv()
         self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
                              base_url="https://integrate.api.nvidia.com/v1"
                             )
-        self.system_msg = open("system_prompt.md", "r").read()
+        self.ttl_content = open("enhanced_xr.ttl", "r").read()
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
@@ -16,7 +20,7 @@ class Agent:
         self.messages.append(
             {
                 "role": "system",
-                "content": "Root class name: 'Concept' " + self.system_msg
+                "content": "TTL knowledge graph: " + self.ttl_content
             }
         )
 
@@ -36,7 +40,11 @@ class Agent:
     
 
 if __name__ == "__main__":
-    agent = Agent()
-    message = "Write a 10 word joke"
-    response = agent.send_messages(message)
+    start = time.time()
+    llm = TTLFlatLLMCall()
+    message = "What does the knowledge graph say about head mounted display?"
+    response = llm.send_messages(message)
+    end = time.time()
     print(response)
+    print_token_usage(llm)
+    print(f"Executed in {end - start} seconds.")
