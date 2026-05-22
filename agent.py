@@ -2,7 +2,7 @@ import json
 import re
 
 from llm import Agent
-from tools import get_class_info, query_subclass
+from tools import Tools
 import time
 
 
@@ -59,11 +59,13 @@ def normalize_action_input(action_input):
 
 def agent_query(user_input, max_turns=10):
     agent = Agent()
+    tools = Tools()
     next_message = user_input
 
     known_tools = {
-        "query_subclass": query_subclass,
-        "get_class_info": get_class_info,
+        "query_subclass": tools.query_subclass,
+        "inspect_class": tools.inspect_class,
+        "recurse_n_layers": tools.recurse_n_layers,
     }
 
     for _ in range(max_turns):
@@ -85,7 +87,12 @@ def agent_query(user_input, max_turns=10):
             )
             continue
 
-        result = known_tools[action](normalize_action_input(action_input))
+        tool_input = normalize_action_input(action_input)
+        print(f"Running tool: {action}({tool_input!r})")
+        if isinstance(tool_input, dict):
+            result = known_tools[action](**tool_input)
+        else:
+            result = known_tools[action](tool_input)
         next_message = "Observation: " + json.dumps(result, ensure_ascii=False)
 
     print_token_usage(agent)
