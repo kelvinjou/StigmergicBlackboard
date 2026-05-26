@@ -1,19 +1,149 @@
-from rdflib import Graph, Literal, URIRef, RDFS
+import re
+from datetime import date
+from textwrap import dedent
+
+from rdflib import Graph, Literal, Namespace, URIRef, RDFS, RDF, OWL
 
 
 TTL_PATH = "enhanced_xr.ttl"
 
 class Tools:
 
-    def __init__(self):
+    def __init__(self, ttl_path: str = TTL_PATH):
+        self.ttl_path = ttl_path
         self.g = Graph()
-        self.g.parse(TTL_PATH, format="ttl")
+        self.g.parse(self.ttl_path, format="ttl")
+        self.default_namespace = self._default_namespace()
+        self.ontology = Namespace(str(self.default_namespace))
 
 
     def _local_name(self, uri) -> str:
         uri_str = str(uri)
         return uri_str.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
 
+    def _default_namespace(self):
+        default_namespace = dict(self.g.namespaces()).get("")
+        if default_namespace is None:
+            raise ValueError("TTL file must define a default namespace.")
+        return default_namespace
+
+    def _compact_uri(self, uri) -> str:
+        uri_str = str(uri)
+        namespace = str(self.default_namespace)
+        if uri_str.startswith(namespace):
+            return f":{uri_str.removeprefix(namespace)}"
+        return f"<{uri_str}>"
+
+    def _escape_turtle_literal(self, value: str) -> str:
+        return (
+            value
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+        )
+
+    def _slugify(self, value: str, max_words: int = 8) -> str:
+        words = re.findall(r"[A-Za-z0-9]+", value)
+        if not words:
+            return "Evidence"
+        return "".join(word[:1].upper() + word[1:] for word in words[:max_words])
+
+    def _unique_evidence_name(self, target_class_name: str, evidence: str) -> str:
+        base_name = f"{target_class_name}Evidence{self._slugify(evidence, max_words=6)}"
+        candidate_name = base_name
+        index = 2
+
+        while URIRef(str(self.default_namespace) + candidate_name) in self.g.subjects():
+            candidate_name = f"{base_name}{index}"
+            index += 1
+
+        return candidate_name
+
+    def _class_path(self, target_uri: URIRef):
+        parent_lookup = {
+            child: parent
+            for child, parent in self.g.subject_objects(predicate=RDFS.subClassOf)
+            if isinstance(child, URIRef) and isinstance(parent, URIRef)
+        }
+
+        path = [self._local_name(target_uri)]
+        visited = {target_uri}
+        current = target_uri
+
+        while current in parent_lookup:
+            parent = parent_lookup[current]
+            if parent in visited:
+                break
+
+            path.append(self._local_name(parent))
+            visited.add(parent)
+            current = parent
+
+        return list(reversed(path))
+
+    def _append_ttl_block(self, block: str):
+        with open(self.ttl_path, "a", encoding="utf-8") as ttl_file:
+            ttl_file.write(block)
+
+    def _verify_ttl_file(self):
+        verify_graph = Graph()
+        verify_graph.parse(self.ttl_path, format="ttl")
+
+    def _ensure_grounded_evidence_schema(self):
+        evidence_class = self.ontology.GroundedEvidence
+        evidence_property = self.ontology.isGroundedEvidenceFor
+
+        schema_block_parts = []
+
+        if (evidence_class, None, None) not in self.g:
+            self.g.add((evidence_class, RDF.type, OWL.Class))
+            self.g.add((evidence_class, RDFS.label, Literal("Grounded Evidence", lang="en")))
+            self.g.add((evidence_class, RDFS.subClassOf, self.ontology.Concept))
+            self.g.add((
+                evidence_class,
+                RDFS.comment,
+                Literal(
+                    "A user-provided evidence class that records grounded quantitative or qualitative support for an ontology concept.",
+                    lang="en",
+                ),
+            ))
+            schema_block_parts.append(
+                dedent("""
+:GroundedEvidence rdf:type owl:Class ;
+    rdfs:label "Grounded Evidence"@en ;
+    rdfs:subClassOf :Concept ;
+    rdfs:comment "A user-provided evidence class that records grounded quantitative or qualitative support for an ontology concept."@en .
+""")
+            )
+
+        if (evidence_property, None, None) not in self.g:
+            self.g.add((evidence_property, RDF.type, OWL.ObjectProperty))
+            self.g.add((evidence_property, RDFS.label, Literal("is grounded evidence for", lang="en")))
+            self.g.add((
+                evidence_property,
+                RDFS.comment,
+                Literal("Links a grounded evidence class to the ontology concept it supports.", lang="en"),
+            ))
+            self.g.add((evidence_property, RDFS.domain, evidence_class))
+            self.g.add((evidence_property, RDFS.range, self.ontology.Concept))
+            schema_block_parts.append(
+                dedent("""
+:isGroundedEvidenceFor rdf:type owl:ObjectProperty ;
+    rdfs:label "is grounded evidence for"@en ;
+    rdfs:comment "Links a grounded evidence class to the ontology concept it supports."@en ;
+    rdfs:domain :GroundedEvidence ;
+    rdfs:range :Concept .
+""")
+            )
+
+        if schema_block_parts:
+            self._append_ttl_block(
+                "\n###############################################################################\n"
+                "# USER-GROUNDED EVIDENCE SCHEMA\n"
+                "###############################################################################\n"
+                + "".join(schema_block_parts)
+            )
 
     def _format_value(self, value):
         if isinstance(value, URIRef):
@@ -224,54 +354,69 @@ class Tools:
 
         return [self._local_name(uri) for uri in visited]
 
-# def query_relations(target_class_name: str):
-#     g = Graph()
-#     g.parse(TTL_PATH, format="ttl")
-#     target_uri = _resolve_ttl_identifier(g, target_class_name)
+    def add_evidence(self, target_class_name: str, evidence: str):
+        """
+        Adds a user-provided grounded evidence class under an existing TTL/RDF class.
 
-#     results = g.query(
-#         """
-#         SELECT ?subject ?predicate ?object WHERE {
-#             {   
-#                 ?target_class ?predicate ?object .
-#                 BIND(?target_class AS ?subject)
-#             }
-#             UNION
-#             {
-#                 ?subject ?predicate ?target_class .
-#                 BIND(?target_class AS ?object)
-#             }
-#         }
-#         """,
-#         initBindings={"target_class": target_uri}
-#     )
+        The new evidence node is modeled as an owl:Class so it can participate in
+        the existing subclass hierarchy. It is also typed as :GroundedEvidence and
+        linked back to the supported concept with :isGroundedEvidenceFor.
 
-#     triples = [
-#         {
-#             "subject": str(row.subject),
-#             "subject_name": _local_name(row.subject),
-#             "predicate": str(row.predicate),
-#             "predicate_name": _local_name(row.predicate),
-#             "object": str(row.object),
-#             "object_name": _local_name(row.object),
-#         }
-#         for row in results
-#     ]
+        Args:
+            target_class_name (str): Existing local TTL class identifier that the
+                evidence supports, such as "HeadMountedDisplay".
+            evidence (str): Quantitative or qualitative evidence supporting an
+                aspect of the target concept.
 
-#     as_subject = [
-#         triple for triple in triples
-#         if triple["subject"] == str(target_uri)
-#     ]
-#     as_object = [
-#         triple for triple in triples
-#         if triple["object"] == str(target_uri)
-#     ]
+        Returns:
+            dict: A structured result containing the evidence node identifier,
+                supported class, hierarchical insertion path, and original
+                evidence text.
+        """
+        if not evidence or not evidence.strip():
+            raise ValueError("Evidence text cannot be empty.")
 
-#     return {
-#         "target_class_name": target_class_name,
-#         "target_uri": str(target_uri),
-#         "as_subject": as_subject,
-#         "as_object": as_object,
-#         "triples": triples,
-#         "count": len(triples),
-#     }
+        target_uri = self._resolve_ttl_identifier(target_class_name)
+        if (target_uri, None, None) not in self.g:
+            raise ValueError(f"Could not find target class: {target_class_name}")
+
+        self._ensure_grounded_evidence_schema()
+
+        target_local_name = self._local_name(target_uri)
+        evidence_name = self._unique_evidence_name(target_local_name, evidence)
+        evidence_uri = URIRef(str(self.default_namespace) + evidence_name)
+        evidence_literal = Literal(evidence.strip(), lang="en")
+
+        self.g.add((evidence_uri, RDF.type, OWL.Class))
+        self.g.add((evidence_uri, RDF.type, self.ontology.GroundedEvidence))
+        self.g.add((evidence_uri, RDFS.label, Literal(f"Evidence for {target_local_name}", lang="en")))
+        self.g.add((evidence_uri, RDFS.subClassOf, target_uri))
+        self.g.add((evidence_uri, RDFS.comment, evidence_literal))
+        self.g.add((evidence_uri, self.ontology.isGroundedEvidenceFor, target_uri))
+
+        ttl_block = dedent(f"""
+###############################################################################
+# USER-GROUNDED EVIDENCE ADDED {date.today().isoformat()}
+###############################################################################
+
+:{evidence_name} rdf:type owl:Class ,
+                          :GroundedEvidence ;
+    rdfs:label "Evidence for {target_local_name}"@en ;
+    rdfs:subClassOf {self._compact_uri(target_uri)} ;
+    rdfs:comment "{self._escape_turtle_literal(evidence.strip())}"@en ;
+    :isGroundedEvidenceFor {self._compact_uri(target_uri)} .
+""")
+        self._append_ttl_block(ttl_block)
+        self._verify_ttl_file()
+
+        path = self._class_path(evidence_uri)
+
+        return {
+            "target_class_name": target_local_name,
+            "evidence_class_name": evidence_name,
+            "evidence": evidence.strip(),
+            "ttl_path": self.ttl_path,
+            "persisted": True,
+            "path": path,
+            "path_string": " > ".join(path),
+        }

@@ -70,6 +70,27 @@ Returns:
     list[str]: Local class names for all descendant classes found within the
         requested depth.
 
+### add_evidence
+
+Link new provided grounded evidence to a specified TTL/RDF class that supports the concept.
+Use this only when the user explicitly asks to add, record, attach, or save new
+evidence in the ontology.
+
+Args:
+    target_class_name (str): The local TTL class identifier that the evidence
+        supports, such as "HeadMountedDisplay".
+    evidence (str): The quantitative or qualitative evidence that demonstrate some aspect of the concept described by the class.
+
+Returns:
+    dict: A structured evidence result containing:
+        - target_class_name: The queried class name the evidence supports
+        - evidence_class_name: The new grounded evidence class identifier
+        - evidence: The evidence text that was added
+        - path: The hierarchical path where the grounded evidence subclass was added
+        - path_string: The same path as a readable string
+
+After receiving an Observation from add_evidence, stop using tools and provide
+a Final Answer that reports the evidence_class_name and path_string.
 
 
 Response rules:
@@ -84,7 +105,7 @@ You MUST use this exact format for tool calls:
 
 Question: {the input question}
 Thought: {brief reason for the next lookup}
-Action: {one of: query_subclass, inspect_class, recurse_n_layers}
+Action: {one of: query_subclass, inspect_class, recurse_n_layers, add_evidence}
 Action Input: {local class name, or JSON object if the tool needs multiple arguments}
 PAUSE
 

@@ -26,12 +26,12 @@ def extract_action(message):
 
 
 def extract_answer(message):
-    answer_regex = re.compile(r"^(?:Final Answer|Answer):\s*(.+)$")
-
-    for line in message.split("\n"):
-        answer_match = answer_regex.match(line)
-        if answer_match:
-            return answer_match.group(1)
+    answer_match = re.search(
+        r"(?ms)^(?:Final Answer|Answer):\s*(.+?)(?=\n(?:Thought|Action|Action Input):|\Z)",
+        message,
+    )
+    if answer_match:
+        return answer_match.group(1).strip()
 
     return None
 
@@ -49,7 +49,7 @@ def normalize_action_input(action_input):
     except json.JSONDecodeError:
         return action_input.strip("\"'")
 
-    if isinstance(parsed, dict):
+    if isinstance(parsed, dict) and len(parsed) == 1:
         for key in ("parent_class", "parent_class_name", "target_class", "target_class_name"):
             if key in parsed:
                 return parsed[key]
@@ -65,7 +65,9 @@ def agent_query(user_input, max_turns=10):
     known_tools = {
         "query_subclass": tools.query_subclass,
         "inspect_class": tools.inspect_class,
+        "get_class_info": tools.inspect_class,
         "recurse_n_layers": tools.recurse_n_layers,
+        "add_evidence": tools.add_evidence,
     }
 
     for _ in range(max_turns):
@@ -73,12 +75,16 @@ def agent_query(user_input, max_turns=10):
         print(response)
         print()
 
+        answer = extract_answer(response)
+        if answer:
+            print_token_usage(agent)
+            return answer
+
         action, action_input = extract_action(response)
 
         if not action:
-            answer = extract_answer(response) or response
             print_token_usage(agent)
-            return answer
+            return response
 
         if action not in known_tools:
             next_message = (
@@ -88,11 +94,13 @@ def agent_query(user_input, max_turns=10):
             continue
 
         tool_input = normalize_action_input(action_input)
-        print(f"Running tool: {action}({tool_input!r})")
-        if isinstance(tool_input, dict):
-            result = known_tools[action](**tool_input)
-        else:
-            result = known_tools[action](tool_input)
+        try:
+            if isinstance(tool_input, dict):
+                result = known_tools[action](**tool_input)
+            else:
+                result = known_tools[action](tool_input)
+        except Exception as exc:
+            result = {"error": str(exc), "tool": action}
         next_message = "Observation: " + json.dumps(result, ensure_ascii=False)
 
     print_token_usage(agent)
@@ -110,6 +118,10 @@ def print_token_usage(agent):
 
 if __name__ == "__main__":
     start = time.time()
-    agent_query("What does the knowledge graph say about head mounted display?")
+    # What does the knowledge graph say about head mounted display?
+
+    # Insertions
+    # 30% of youth reported wearing head mounted display make them nauseous
+    agent_query("Add new evidence that 15% of users say they prefer hand gesture tasks to be within 0.65 meters in front of them")
     end = time.time()
     print(f"Executed in {end - start} seconds.")

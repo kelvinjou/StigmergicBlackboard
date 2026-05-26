@@ -971,3 +971,29 @@
 ###############################################################################
 # END OF ONTOLOGY
 ###############################################################################
+
+###############################################################################
+# USER-GROUNDED EVIDENCE SCHEMA
+###############################################################################
+
+:GroundedEvidence rdf:type owl:Class ;
+    rdfs:label "Grounded Evidence"@en ;
+    rdfs:subClassOf :Concept ;
+    rdfs:comment "A user-provided evidence class that records grounded quantitative or qualitative support for an ontology concept."@en .
+
+:isGroundedEvidenceFor rdf:type owl:ObjectProperty ;
+    rdfs:label "is grounded evidence for"@en ;
+    rdfs:comment "Links a grounded evidence class to the ontology concept it supports."@en ;
+    rdfs:domain :GroundedEvidence ;
+    rdfs:range :Concept .
+
+###############################################################################
+# USER-GROUNDED EVIDENCE ADDED 2026-05-25
+###############################################################################
+
+:HeadMountedDisplayEvidence30OfYouthReportedWearingHead rdf:type owl:Class ,
+                          :GroundedEvidence ;
+    rdfs:label "Evidence for HeadMountedDisplay"@en ;
+    rdfs:subClassOf :HeadMountedDisplay ;
+    rdfs:comment "30% of youth reported wearing head mounted display make them nauseous"@en ;
+    :isGroundedEvidenceFor :HeadMountedDisplay .
