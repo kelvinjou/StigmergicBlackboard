@@ -15,19 +15,41 @@ find a community n levels down
 """
 
 from pathlib import Path
+import sys
 
 from rdflib import RDFS, Graph, Namespace
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from PrunedReconstruction.baseline_summarization import BaselineSummarization
+from agent import agent_query
+
+COMMUNITY = "WayfindingTechnique"
+
 INPUT_TTL = REPO_ROOT / "enhanced_xr.ttl"
-DETACHED_OUTPUT_TTL = REPO_ROOT / "GeneratedTTLs" / "detached.ttl"
-MODIFIED_ORIGINAL = REPO_ROOT / "GeneratedTTLs" / "modified_original.ttl"
+DETACHED_OUTPUT_TTL = REPO_ROOT / "dataset" / COMMUNITY / "detached.ttl"
+MODIFIED_ORIGINAL = REPO_ROOT / "dataset" / COMMUNITY / "modified_original.ttl"
+COMMUNITY_SUMMARY = REPO_ROOT / "dataset" / COMMUNITY / "summary.txt"
+EX = Namespace("http://example.org/3dui-ontology#")
 
 g = Graph()
 g.parse(INPUT_TTL, format="turtle")
 
-EX = Namespace("http://example.org/3dui-ontology#")
-root_class = EX.WayfindingTechnique
+
+root_class = EX[COMMUNITY]
+
+# In-context TTL (baseline) generate description without agent drilling through the layers. 
+# just give it the entire TTL in the context window
+summary = BaselineSummarization()
+baseline_summarization_response = summary.send_messages(f"Generate a thorough description about {COMMUNITY}, and its relations with other communities in the ontology especially communities that are a subclass of it.")
+print(baseline_summarization_response)
+
+
+# SPARQL context retrieval (maybe later)
+# right now, we're just gonna fix the summarization, so we can see if agents can insert them properly. Have a verification method
+
 
 # step down into descendants transitively
 branch_classes = set(g.transitive_subjects(RDFS.subClassOf, root_class))
@@ -55,10 +77,10 @@ DETACHED_OUTPUT_TTL.parent.mkdir(parents=True, exist_ok=True)
 detached_g.serialize(destination=DETACHED_OUTPUT_TTL, format="turtle")
 print(f"Extracted {len(detached_g)} triples for {len(branch_classes)} classes.")
 
+
 MODIFIED_ORIGINAL.parent.mkdir(parents=True, exist_ok=True)
 modified_g.serialize(destination=MODIFIED_ORIGINAL, format="turtle")
 print("Modified Original")
 
-# generate description with LLM before pruning
-
-
+with open(COMMUNITY_SUMMARY, "w") as f:
+    f.write(str(baseline_summarization_response))

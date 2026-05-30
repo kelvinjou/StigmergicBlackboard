@@ -1,0 +1,33 @@
+I'll analyze the `WayfindingTechnique` class and its relationships within this 3D UI ontology, examining its position in the hierarchy, subclasses, and connections to other concepts.
+
+## WayfindingTechnique: Comprehensive Description
+
+### Position in the Ontology Hierarchy
+
+`WayfindingTechnique` is defined as:
+
+```turtle
+:WayfindingTechnique rdf:type owl:Class ;
+    rdfs:label "Wayfinding Technique"@en ;
+    rdfs:subClassOf :InteractionTechnique ;
+    rdfs:comment "Methods that assist the user in maintaining and recovering spatial orientation during navigation."@en .
+```
+
+| Level | Class | Description |
+|-------|-------|-------------|
+| Root | `:Concept` | Top-level domain concept |
+| ↓ | `:InteractionTechnique` | Algorithm translating user input to application state changes |
+| ↓ | **`WayfindingTechnique`** | **Specifically for spatial orientation and navigation support** |
+
+### Direct Subclasses (The Wayfinding Technique Community)
+
+The ontology defines six concrete subclasses that constitute the "Wayfinding Technique" community:
+
+| Subclass | Definition | Core Function |
+|----------|-----------|-------------|
+| `TrailCues` | *"Leaves a visible trail or path history to support backtracking and route learning."* | **History-based**: Persistent visual record of movement path; supports retrospective navigation and learning |
+| `Breadcrumbs` | *"Discrete markers placed along a route that indicate the path back to a known origin."* | **Marker-based**: Deliberately placed symbolic waypoints; discrete vs. continuous trail |
+| `Compass` | *"A virtual compass that provides egocentric orientation relative to known reference directions, often anchored to global or local coordinate frames."* | **Egocentric orientation**: Heading/direction information; can reference multiple coordinate systems |
+| `VirtualMap` | *"An abstracted top-down or 3D map that displays the user's location and landmarks in the environment."* | **Allocentric overview**: Survey perspective; environmental knowledge externalization |
+| `Signage` | *"Virtual signs or labels that provide textual or symbolic navigation information analogous to real-world signage."* | **Semantic cueing**: Language/symbol-based environmental communication |
+| `ArchitecturalSubdivisions` | *"Using corridors, rooms, and other architectural elements to create memorable and distinct regions that support cognitive mapping."* | **Structural organization**: Environmental design as wayfinding aid
