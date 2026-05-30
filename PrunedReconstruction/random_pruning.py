@@ -20,7 +20,8 @@ from rdflib import RDFS, Graph, Namespace
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INPUT_TTL = REPO_ROOT / "enhanced_xr.ttl"
-OUTPUT_TTL = REPO_ROOT / "GeneratedTTLs" / "detached.ttl"
+DETACHED_OUTPUT_TTL = REPO_ROOT / "GeneratedTTLs" / "detached.ttl"
+MODIFIED_ORIGINAL = REPO_ROOT / "GeneratedTTLs" / "modified_original.ttl"
 
 g = Graph()
 g.parse(INPUT_TTL, format="turtle")
@@ -32,29 +33,32 @@ root_class = EX.WayfindingTechnique
 branch_classes = set(g.transitive_subjects(RDFS.subClassOf, root_class))
 branch_classes.add(root_class) # include the root itself (?)
 
-new_g = Graph()
+detached_g = Graph()
+modified_g = g
 # preprocess
 for prefix, ns in g.namespaces():
-    new_g.bind(prefix, ns)
+    detached_g.bind(prefix, ns)
 
 for cls in branch_classes:
     # only get classes where the specified class is under the target root class 
     # what the class says abt itself (as subject)
     for triple in g.triples((cls, None, None)):
-        new_g.add(triple)
+        detached_g.add(triple)
+        modified_g.remove(triple)
     
     # everything that references this class
     for triple in g.triples((None, None, cls)):
-        new_g.add(triple)
+        detached_g.add(triple)
+        modified_g.remove(triple)
 
-OUTPUT_TTL.parent.mkdir(parents=True, exist_ok=True)
-new_g.serialize(destination=OUTPUT_TTL, format="turtle")
-print(f"Extracted {len(new_g)} triples for {len(branch_classes)} classes.")
+DETACHED_OUTPUT_TTL.parent.mkdir(parents=True, exist_ok=True)
+detached_g.serialize(destination=DETACHED_OUTPUT_TTL, format="turtle")
+print(f"Extracted {len(detached_g)} triples for {len(branch_classes)} classes.")
 
-# for stmt in g:
-#     pprint.pprint(stmt)
+MODIFIED_ORIGINAL.parent.mkdir(parents=True, exist_ok=True)
+modified_g.serialize(destination=MODIFIED_ORIGINAL, format="turtle")
+print("Modified Original")
+
+# generate description with LLM before pruning
 
 
-# for saving a new copy of the graph: 
-# g.serialize(destination="tbl.ttl")
-# get all subsequent child references using transitive_subjects (top-down)
