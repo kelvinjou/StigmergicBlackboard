@@ -31,7 +31,7 @@ g.parse(DEST_TTL, format="turtle")
 # save the updated graph as new
 g.serialize(destination=DEST_TTL, format="turtle")
 
-
+#
 # # create copy of the modified_original.ttl first
 # shutil.copy(SRC_TTL, DEST_TTL)
 
