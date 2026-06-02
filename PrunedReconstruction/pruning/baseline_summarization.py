@@ -1,14 +1,18 @@
-from openai import OpenAI
-from dotenv import load_dotenv
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 class BaselineSummarization:
-    def __init__(self):
+    def __init__(self, ttl_path=PROJECT_ROOT / "enhanced_xr.ttl"):
         load_dotenv()
         self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
                              base_url="https://integrate.api.nvidia.com/v1"
                             )
-        self.raw_ttl = open("enhanced_xr.ttl", "r").read()
+        self.raw_ttl = Path(ttl_path).read_text()
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
@@ -43,7 +47,7 @@ if __name__ == "__main__":
     response = agent.send_messages(message)
     print(response)
 
-
+# example output
 """
 `:WayfindingTechnique` occupies a **bridge position** in this ontology: it is fundamentally an interaction technique (process-oriented), but its effectiveness is entirely measured by its impact on human cognitive factors (particularly `:SpatialMemory`), and its implementation spans hardware displays, UI components, and design principles. Unlike `:SelectionTechnique` or `:ManipulationTechnique` which have more direct object targets, wayfinding is **meta-cognitive** — it supports the user's internal model of space rather than direct environmental change.
 """

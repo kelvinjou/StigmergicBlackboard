@@ -1,0 +1,56 @@
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+class BaselineInsert:
+    def __init__(self, modified_ttl_path, summary_file_path):
+        load_dotenv()
+        self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
+                             base_url="https://integrate.api.nvidia.com/v1"
+                            )
+        self.modified_ttl_path = open(modified_ttl_path, "r").read()
+        self.summary = open(summary_file_path, "r").read()
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.total_tokens = 0
+        self.messages = []
+        self.messages.append(
+            {
+                "role": "system",
+                "content": (
+                    "Root class name: 'Concept'\n\n"
+                    "Current ontology TTL:\n"
+                    f"{self.modified_ttl_path}\n\n"
+                    "Create additional components to the ontology, based on the description"
+                    f"{self.summary}\n\n"
+                )
+            }
+        )
+
+    def send_messages(self, message):
+        self.messages.append({"role": "user", "content": str(message)})
+        response = self.client.chat.completions.create(
+            model="moonshotai/kimi-k2.6",
+            messages=self.messages
+        )
+        content = response.choices[0].message.content
+        self.messages.append({"role": "assistant", "content": content})
+        if response.usage:
+            self.prompt_tokens += response.usage.prompt_tokens or 0
+            self.completion_tokens += response.usage.completion_tokens or 0
+            self.total_tokens += response.usage.total_tokens or 0
+        return content
+    
+
+if __name__ == "__main__":
+    SRC_TTL = "dataset/baseline/WayfindingTechnique/modified_original.ttl"
+    SUMMARY = "dataset/baseline/WayfindingTechnique/summary.txt"
+    llm = BaselineInsert(
+        modified_ttl_path=SRC_TTL,
+        summary_file_path=SUMMARY
+    )
+    message = "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
+    response = llm.send_messages(message)
+    print(response)
+
+

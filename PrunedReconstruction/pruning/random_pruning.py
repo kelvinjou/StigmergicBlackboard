@@ -14,24 +14,28 @@ find a community n levels down
     - create a temp ttl file that has any references from that spec. community
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Literal
 
 from rdflib import RDFS, Graph, Namespace
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from PrunedReconstruction.pruning.baseline_summarization import BaselineSummarization
 from agent import agent_query
 
 COMMUNITY = "WayfindingTechnique"
 
-INPUT_TTL = REPO_ROOT / "enhanced_xr.ttl"
-DETACHED_OUTPUT_TTL = REPO_ROOT / "dataset" / COMMUNITY / "detached.ttl"
-MODIFIED_ORIGINAL = REPO_ROOT / "dataset" / COMMUNITY / "modified_original.ttl"
-COMMUNITY_SUMMARY = REPO_ROOT / "dataset" / COMMUNITY / "summary.txt"
+ExperimentType = Literal["baseline", "sparql"]
+EXPERIMENT_TYPE: ExperimentType = "sparql"
+
+INPUT_TTL = PROJECT_ROOT / "enhanced_xr.ttl"
+DETACHED_OUTPUT_TTL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "detached.ttl"
+MODIFIED_ORIGINAL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "modified_original.ttl"
+COMMUNITY_SUMMARY = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "summary.txt"
 EX = Namespace("http://example.org/3dui-ontology#")
 
 g = Graph()

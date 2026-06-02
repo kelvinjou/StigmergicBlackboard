@@ -1,0 +1,51 @@
+ I'll analyze the `WayfindingTechnique` class and its relationships within this ontology based on the provided RDF/OWL definition.
+
+## Overview of WayfindingTechnique
+
+**IRI:** `http://example.org/3dui-ontology#WayfindingTechnique`
+
+**Definition:** "Methods that assist the user in maintaining and recovering spatial orientation during navigation."
+
+**Superclass:** `InteractionTechnique` (which itself is a subclass of `Concept`)
+
+**Chapter Coverage:** Covered in **Chapter 8** — *Wayfinding and Orientation*
+
+---
+
+## Class Hierarchy
+
+```
+Concept
+└── InteractionTechnique
+    └── WayfindingTechnique
+        ├── TrailCues
+        ├── Breadcrumbs
+        ├── Compass
+        ├── VirtualMap
+        ├── Signage
+        └── ArchitecturalSubdivisions
+```
+
+---
+
+## Direct Subclasses (The Wayfinding Technique Community)
+
+| Subclass | Description | Core Mechanism |
+|----------|-------------|--------------|
+| **TrailCues** | Leaves a visible trail or path history to support backtracking and route learning | **Temporal persistence**: Renders the user's past trajectory as a continuous visual trace |
+| **Breadcrumbs** | Discrete markers placed along a route that indicate the path back to a known origin | **Discrete landmarking**: Point-based trail with explicit origin-destination semantics |
+| **Compass** | A virtual compass providing egocentric orientation relative to known reference directions | **Egocentric reference frame**: Maintains heading awareness against global or local coordinate systems |
+| **VirtualMap** | Abstracted top-down or 3D map displaying the user's location and landmarks | **Allocentric overview**: Transitions from immersed egocentric view to bird's-eye survey perspective |
+| **Signage** | Virtual signs or labels providing textual or symbolic navigation information | **Symbolic distal cue**: Analogous to real-world environmental labeling systems |
+| **ArchitecturalSubdivisions** | Using corridors, rooms, and architectural elements to create memorable distinct regions | **Structural encoding**: Leverages environmental geometry for cognitive map formation |
+
+---
+
+## Relations to Other Ontology Communities
+
+### 1. **Sibling Communities** (Shared Parent: `InteractionTechnique`)
+
+| Sibling Class | Relation | Nature of Relationship |
+|---------------|----------|----------------------|
+| `SelectionTechnique` | Disjoint specialization | Both inherit from `InteractionTechnique` but target different tasks; no technique in ontology is both |
+| `ManipulationTechnique` | Disjoint specialization | Spatial

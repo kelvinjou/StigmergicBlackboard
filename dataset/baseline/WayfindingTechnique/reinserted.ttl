@@ -828,15 +828,10 @@
 # BASELINE GENERATION (PURE LLM) OUTPUT
 #######################################
 
-@prefix : <http://example.org/3dui-ontology#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-
 :WayfindingTechnique a owl:Class ;
     rdfs:label "Wayfinding Technique"@en ;
-    :coveredInChapter :Ch8 ;
-    rdfs:comment "Methods that assist the user in maintaining and recovering spatial orientation during navigation."@en ;
-    rdfs:subClassOf :InteractionTechnique .
+    rdfs:subClassOf :InteractionTechnique ;
+    rdfs:comment "Methods that assist the user in maintaining and recovering spatial orientation during navigation."@en .
 
 :TrailCues a owl:Class ;
     rdfs:label "Trail Cues"@en ;
@@ -879,101 +874,3 @@
     :supportsTask :WayfindingTask ;
     rdfs:comment "Using corridors, rooms, and other architectural elements to create memorable and distinct regions that support cognitive mapping."@en ;
     rdfs:subClassOf :WayfindingTechnique .
-
-:MinimizeLatentation a owl:Class ;
-    rdfs:label "Minimize Latentation"@en ;
-    :coveredInChapter :Ch8 ;
-    rdfs:comment "Reduce the cognitive and physical effort required for wayfinding by providing clear orientation cues and minimizing unnecessary travel."@en ;
-    rdfs:subClassOf :DesignPrinciple .
-
-:ConsistentReferenceFrames a owl:Class ;
-    rdfs:label "Consistent Reference Frames"@en ;
-    :coveredInChapter :Ch8 ;
-    rdfs:comment "Maintain stable and consistent spatial reference frames between the physical and virtual environments to reduce disorientation."@en ;
-    rdfs:subClassOf :DesignPrinciple .
-
-:EnvironmentSegregation a owl:Class ;
-    rdfs:label "Environment Segregation"@en ;
-    :coveredInChapter :Ch8 ;
-    rdfs:comment "Divide virtual environments into distinct, recognizable regions to facilitate cognitive mapping and spatial memory formation."@en ;
-    rdfs:subClassOf :DesignPrinciple .
-
-:CognitiveMap a owl:Class ;
-    rdfs:label "Cognitive Map"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "A mental representation of spatial relationships and environmental layout that supports navigation and wayfinding."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:SpatialUpdating a owl:Class ;
-    rdfs:label "Spatial Updating"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "The continuous process of integrating self-motion cues to maintain accurate cognitive representations of position and orientation."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:EgocentricReferenceFrame a owl:Class ;
-    rdfs:label "Egocentric Reference Frame"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "A viewer-centered spatial reference frame in which locations are represented relative to the observer's body position and orientation."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:AllocentricReferenceFrame a owl:Class ;
-    rdfs:label "Allocentric Reference Frame"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "An environment-centered spatial reference frame in which locations are represented relative to external landmarks and environmental features."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:ProspectiveMemory a owl:Class ;
-    rdfs:label "Prospective Memory"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "Memory for intended future actions, such as remembering to turn at a particular landmark during navigation."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:Landmark a owl:Class ;
-    rdfs:label "Landmark"@en ;
-    :coveredInChapter :Ch10 ;
-    rdfs:comment "A salient environmental feature used as a reference point for spatial orientation and wayfinding."@en ;
-    rdfs:subClassOf :UIComponent .
-
-:PathIntegration a owl:Class ;
-    rdfs:label "Path Integration"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "The process of continuously updating one's position and orientation by integrating self-motion cues over time."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:RegisterMismatch a owl:Class ;
-    rdfs:label "Register Mismatch"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "The misalignment between egocentric and allocentric spatial representations that can lead to disorientation and navigation errors."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:RouteKnowledge a owl:Class ;
-    rdfs:label "Route Knowledge"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "Sequential memory of turns and distances along specific paths, as opposed to holistic survey knowledge of spatial layouts."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:SurveyKnowledge a owl:Class ;
-    rdfs:label "Survey Knowledge"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "Holistic understanding of spatial relationships and overall environmental layout, analogous to a map-like representation."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:SpatialPresence a owl:Class ;
-    rdfs:label "Spatial Presence"@en ;
-    :coveredInChapter :Ch3 ;
-    rdfs:comment "The subjective sensation of being physically located within and surrounded by the virtual environment."@en ;
-    rdfs:subClassOf :CognitiveFactor .
-
-:Cybersickness a owl:Class ;
-    owl:equivalentClass [
-        owl:intersectionOf (
-            :VestibularFactor
-            [
-                a owl:Restriction ;
-                owl:onProperty :causes ;
-                owl:someValuesFrom :Cybersickness
-            ]
-        )
-    ] .
-
-:Cybersickness rdfs:subClassOf :HumanFactor .
