@@ -24,11 +24,19 @@ output = bi.send_messages("ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BA
 # create copy of the modified_original.ttl firstte
 shutil.copy(SRC_TTL, DEST_TTL)
 
-def extract_ttl_content(text: str) -> str:
-    return text.strip().removeprefix("```turtle").removesuffix("```").strip()
+def extract_md_content(text: str) -> str:
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    return text.strip()
 
 # add on the new ontology relations
-additions = extract_ttl_content(str(output))
+additions = extract_md_content(str(output))
 with open(DEST_TTL, "a") as file:
     file.write(
 """

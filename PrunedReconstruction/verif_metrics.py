@@ -93,4 +93,4 @@ if __name__ == "__main__":
     total_time_taken(sys.argv[1])
 
 
-# run script with: Python3 PrunedReconstruction/verif_metrics.py PrunedReconstruction/insertions/insert_into_mod.py
+# run script with: Python3 PrunedReconstruction/verif_metrics.py PrunedReconstruction/insertions/sparql_insert_execute.py

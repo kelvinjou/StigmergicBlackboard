@@ -58,7 +58,11 @@ if __name__ == "__main__":
         modified_ttl_path=SRC_TTL,
         summary_file_path=SUMMARY
     )
-    message = "ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
+    message = """
+        ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY
+        PROVIDED IN THE FINAL ANSWER.
+        Output shape: ```sparql [OPERATION]```
+        """
     response = llm.send_messages(message)
     print(response)
 

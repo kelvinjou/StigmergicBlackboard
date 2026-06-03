@@ -1,52 +1,70 @@
 import shutil
 import sys
 from pathlib import Path
+
 from rdflib import Graph
+from rdflib.plugins.sparql.parser import parseUpdate
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from PrunedReconstruction.insertions.bl_insert import BaselineInsert
+from PrunedReconstruction.insertions.sparql_insert import SparQLInsert
 from PrunedReconstruction.verif_metrics import validate_ttl
 
-SRC_TTL = "dataset/sparql/WayfindingTechnique/modified_original.ttl"
-DEST_TTL = "dataset/sparql/WayfindingTechnique/reinserted.ttl"
-SUMMARY = "dataset/sparql/WayfindingTechnique/summary.txt"
+SRC_TTL = PROJECT_ROOT / "dataset" / "sparql" / "WayfindingTechnique" / "modified_original.ttl"
+DEST_TTL = PROJECT_ROOT / "dataset" / "sparql" / "WayfindingTechnique" / "reinserted.ttl"
+SUMMARY = PROJECT_ROOT / "dataset" / "sparql" / "WayfindingTechnique" / "summary.txt"
 
-bi = BaselineInsert(
+bi = SparQLInsert(
     modified_ttl_path=SRC_TTL,
     summary_file_path=SUMMARY
 )
-output = bi.send_messages("ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER.")
+raw_output = bi.send_messages("""
+    ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY
+    PROVIDED IN THE FINAL ANSWER.
+    Output shape: ```sparql [OPERATION]
+        ```
+    """)
 
-# print(f"this is the output:\n{output}")
 shutil.copy(SRC_TTL, DEST_TTL)
 
 g = Graph()
 g.parse(DEST_TTL, format="turtle")
 
-# g.update(str(output))
+def is_valid_sparql_update(query_string):
+    try:
+        parseUpdate(query_string)
+        return True
+    except Exception as e:
+        print(f"Syntax Error: {e}")
+        return False
 
-# save the updated graph as new
-g.serialize(destination=DEST_TTL, format="turtle")
+# print(f"This is the output:\n{raw_output}\n########")
 
-#
-# # create copy of the modified_original.ttl first
-# shutil.copy(SRC_TTL, DEST_TTL)
+def extract_md_content(text: str) -> str:
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    return text.strip()
 
-# def extract_ttl_content(text: str) -> str:
-#     return text.strip().removeprefix("```turtle").removesuffix("```").strip()
+# trimmed sparql
+sparql_output = extract_md_content(str(raw_output))
+# print(f"This is the TRIMMED output:\n{sparql_output}\n########")
 
-# # add on the new ontology relations
-# additions = extract_ttl_content(str(output))
-# with open(DEST_TTL, "a") as file:
-#     file.write(
-# """
-# #######################################
-# # BASELINE GENERATION (PURE LLM) OUTPUT
-# #######################################
-# \n""" + additions)
 
-# # validate     
-# validate_ttl(DEST_TTL)
+if is_valid_sparql_update(sparql_output):
+    print("The generated SPARQL update is valid. ✅")
+    g.update(sparql_output)
+
+    # save the updated graph as new
+    g.serialize(destination=DEST_TTL, format="turtle")
+    validate_ttl(DEST_TTL)
+
+
