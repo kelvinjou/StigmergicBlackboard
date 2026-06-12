@@ -29,8 +29,8 @@ from agent import agent_query
 
 COMMUNITY = "WayfindingTechnique"
 
-ExperimentType = Literal["baseline", "sparql"]
-EXPERIMENT_TYPE: ExperimentType = "sparql"
+ExperimentType = Literal["baseline", "sparql", "agent"]
+EXPERIMENT_TYPE: ExperimentType = "agent"
 
 INPUT_TTL = PROJECT_ROOT / "enhanced_xr.ttl"
 DETACHED_OUTPUT_TTL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "detached.ttl"

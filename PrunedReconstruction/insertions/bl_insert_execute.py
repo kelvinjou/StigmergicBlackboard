@@ -44,7 +44,6 @@ with open(DEST_TTL, "a") as file:
 # BASELINE GENERATION (PURE LLM) OUTPUT
 #######################################
 \n""" + additions)
-
 # validate     
 validate_ttl(DEST_TTL)
 

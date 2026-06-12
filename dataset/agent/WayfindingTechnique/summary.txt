@@ -1,0 +1,44 @@
+ I'll analyze the `WayfindingTechnique` class and its relationships within this ontology in detail.
+
+## WayfindingTechnique: Core Definition
+
+Based on the ontology, **`:WayfindingTechnique`** is defined as:
+
+> *"Methods that assist the user in maintaining and recovering spatial orientation during navigation."*
+
+It is a subclass of:
+- **`:InteractionTechnique`** → **`:Concept`**
+
+This places wayfinding techniques within the broader family of interaction methods, distinct from tasks themselves (like `:WayfindingTask`) but designed to support them.
+
+---
+
+## Direct Subclasses of WayfindingTechnique
+
+The ontology enumerates **six concrete wayfinding techniques** as direct subclasses:
+
+| Class | Description | Core Function |
+|-------|-------------|-------------|
+| **`:TrailCues`** | *"Leaves a visible trail or path history to support backtracking and route learning."* | Historical path visualization |
+| **`:Breadcrumbs`** | *"Discrete markers placed along a route that indicate the path back to a known origin."* | Discrete, origin-oriented navigation aid |
+| **`:Compass`** | *"A virtual compass that provides egocentric orientation relative to known reference directions, often anchored to global or local coordinate frames."* | Orientation in reference frames |
+| **`:VirtualMap`** | *"An abstracted top-down or 3D map that displays the user's location and landmarks in the environment."* | Global spatial overview |
+| **`:Signage`** | *"Virtual signs or labels that provide textual or symbolic navigation information analogous to real-world signage."* | Symbolic/textual environmental cues |
+| **`:ArchitecturalSubdivisions`** | *"Using corridors, rooms, and other architectural elements to create memorable and distinct regions that support cognitive mapping."* | Environmental structuring |
+
+---
+
+## Horizontal Relationships: Sibling Classes Under InteractionTechnique
+
+`:WayfindingTechnique` exists alongside four sibling interaction technique categories, forming a complete picture of how users interact with 3D environments:
+
+```
+:InteractionTechnique
+├── :SelectionTechnique      (Ch 6) — choosing targets
+├── :ManipulationTechnique   (Ch 6) — repositioning objects  
+├── :TravelTechnique          (Ch 7) — changing viewpoint/position
+├── :WayfindingTechnique      (Ch 8) — maintaining orientation
+└── :SystemControlTechnique   (Ch 9) — issuing commands
+```
+
+**Critical Distinction**:

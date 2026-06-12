@@ -1,0 +1,52 @@
+@prefix : <http://example.org/3dui-ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+:ArchitecturalSubdivisions a owl:Class ;
+    rdfs:label "Architectural Subdivisions"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Using corridors, rooms, and other architectural elements to create memorable and distinct regions that support cognitive mapping."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Breadcrumbs a owl:Class ;
+    rdfs:label "Breadcrumbs"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Discrete markers placed along a route that indicate the path back to a known origin."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Compass a owl:Class ;
+    rdfs:label "Compass"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "A virtual compass that provides egocentric orientation relative to known reference directions, often anchored to global or local coordinate frames."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Signage a owl:Class ;
+    rdfs:label "Signage"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Virtual signs or labels that provide textual or symbolic navigation information analogous to real-world signage."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:TrailCues a owl:Class ;
+    rdfs:label "Trail Cues"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Leaves a visible trail or path history to support backtracking and route learning."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:VirtualMap a owl:Class ;
+    rdfs:label "Virtual Map"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "An abstracted top-down or 3D map that displays the user’s location and landmarks in the environment."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:WayfindingTechnique a owl:Class ;
+    rdfs:label "Wayfinding Technique"@en ;
+    :coveredInChapter :Ch8 ;
+    rdfs:comment "Methods that assist the user in maintaining and recovering spatial orientation during navigation."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
