@@ -8,16 +8,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from PrunedReconstruction.insertions.agent_insert import AgentInsert
+from PrunedReconstruction.insertions.agent_insert import AgentInsert, DEFAULT_MODEL
 from PrunedReconstruction.verif_metrics import validate_ttl
 
 
 DEFAULT_EXPERIMENT_TYPE = "agent"
-DEFAULT_COMMUNITY = "WayfindingTechnique"
 
 
-def dataset_paths(experiment_type=DEFAULT_EXPERIMENT_TYPE, community=DEFAULT_COMMUNITY, dataset_dir=None):
+def dataset_paths(experiment_type=DEFAULT_EXPERIMENT_TYPE, community=None, dataset_dir=None):
     if dataset_dir is None:
+        if not community:
+            raise ValueError("Pass --community or --dataset-dir.")
         dataset_dir = PROJECT_ROOT / "dataset" / experiment_type / community
     else:
         dataset_dir = Path(dataset_dir)
@@ -29,7 +30,13 @@ def dataset_paths(experiment_type=DEFAULT_EXPERIMENT_TYPE, community=DEFAULT_COM
     }
 
 
-def run_agent_insert(experiment_type=DEFAULT_EXPERIMENT_TYPE, community=DEFAULT_COMMUNITY, dataset_dir=None, max_turns=12):
+def run_agent_insert(
+    experiment_type=DEFAULT_EXPERIMENT_TYPE,
+    community=None,
+    dataset_dir=None,
+    max_turns=12,
+    model=DEFAULT_MODEL,
+):
     """
     Rebuild reinserted.ttl from the corresponding modified_original.ttl, then
     let the agent append reconstructed ontology chunks to reinserted.ttl.
@@ -56,6 +63,7 @@ def run_agent_insert(experiment_type=DEFAULT_EXPERIMENT_TYPE, community=DEFAULT_
     agent_insert = AgentInsert(
         modified_ttl_path=dest_ttl,
         summary_file_path=summary,
+        model=model,
     )
     result = agent_insert.run(max_turns=max_turns)
 
@@ -79,13 +87,18 @@ def parse_args():
         )
     )
     parser.add_argument("--experiment-type", default=DEFAULT_EXPERIMENT_TYPE)
-    parser.add_argument("--community", default=DEFAULT_COMMUNITY)
+    parser.add_argument(
+        "--community",
+        default=None,
+        help="Pruned community name under dataset/<experiment-type>/.",
+    )
     parser.add_argument(
         "--dataset-dir",
         default=None,
         help="Optional explicit directory containing modified_original.ttl and summary.txt.",
     )
     parser.add_argument("--max-turns", type=int, default=12)
+    parser.add_argument("--model", default=DEFAULT_MODEL)
     return parser.parse_args()
 
 
@@ -96,6 +109,7 @@ if __name__ == "__main__":
         community=args.community,
         dataset_dir=args.dataset_dir,
         max_turns=args.max_turns,
+        model=args.model,
     )
     SRC_TTL = paths["src_ttl"]
     DEST_TTL = paths["dest_ttl"]

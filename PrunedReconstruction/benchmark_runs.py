@@ -1,0 +1,386 @@
+# python3 PrunedReconstruction/benchmark_runs.py --all-communities
+
+import argparse
+import re
+import shutil
+import sys
+import time
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
+from time import perf_counter
+from uuid import uuid4
+
+import pandas as pd
+from rdflib import Graph
+from rdflib.plugins.sparql.parser import parseUpdate
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from PrunedReconstruction.insertions.agent_insert import AgentInsert, DEFAULT_MODEL
+from PrunedReconstruction.insertions.bl_insert import BaselineInsert
+from PrunedReconstruction.insertions.sparql_insert import SparQLInsert
+from PrunedReconstruction.verif_metrics import validate_ttl
+
+INPUT_CSV = PROJECT_ROOT / "Ontology_IN.csv"
+
+EXPERIMENT_TYPES = ("agent", "baseline", "sparql")
+# EXPERIMENT_TYPES = ("agent",)
+
+BENCHMARK_COLUMNS = [
+    "run_id",
+    "run_timestamp_utc",
+    "community_pruned",
+    "model",
+    "experiment_type",
+    "dataset_dir",
+    "input_ttl_path",
+    "detached_ground_truth_ttl_path",
+    "modified_original_ttl_path",
+    "summary_path",
+    "output_ttl_path",
+    "raw_model_output_path",
+    "elapsed_seconds",
+    "ttl_syntax_valid",
+    "sparql_query_valid",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "ground_truth_alignment",
+    "error",
+]
+
+
+def dataset_paths(dataset_root, experiment_type, community, run_id):
+    dataset_dir = Path(dataset_root) / experiment_type / community
+    return {
+        "dataset_dir": dataset_dir,
+        "input_ttl": PROJECT_ROOT / "enhanced_xr.ttl",
+        "detached_ttl": dataset_dir / "detached.ttl",
+        "modified_ttl": dataset_dir / "modified_original.ttl",
+        "summary": dataset_dir / "summary.txt",
+        "output_ttl": dataset_dir / "reinserted.ttl",
+        "raw_output": dataset_dir / f"raw_model_output_{run_id}.txt",
+    }
+
+
+def extract_md_content(text):
+    text = str(text).strip()
+    fenced_blocks = re.findall(r"```(?:\w+)?\s*(.*?)```", text, flags=re.DOTALL)
+    if fenced_blocks:
+        text = "\n;\n".join(block.strip() for block in fenced_blocks if block.strip())
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+
+    return text.strip()
+
+
+def normalize_sparql_batch(text):
+    text = extract_md_content(text)
+    prefix_lines = []
+    body_lines = []
+
+    for line in text.splitlines():
+        if re.match(r"^\s*(?:PREFIX|BASE)\b", line, flags=re.IGNORECASE):
+            if line not in prefix_lines:
+                prefix_lines.append(line)
+        else:
+            body_lines.append(line)
+
+    body = "\n".join(body_lines).strip()
+    body = re.sub(r"(?m)^\s*#.*\n?", "", body)
+    body = re.sub(
+        r"}\s*(?=(?:INSERT|DELETE|WITH|LOAD|CLEAR|CREATE|DROP|ADD|MOVE|COPY)\b)",
+        "};\n\n",
+        body,
+        flags=re.IGNORECASE,
+    )
+    if not re.search(r"(?im)\bWHERE\s*\{", body):
+        body = re.sub(r"(?im)^(\s*)INSERT\s*\{", r"\1INSERT DATA {", body)
+        body = re.sub(r"(?im)^(\s*)DELETE\s*\{", r"\1DELETE DATA {", body)
+    return "\n".join(prefix_lines + ["", body]).strip()
+
+
+def is_valid_sparql_update(query_string):
+    try:
+        parseUpdate(query_string)
+        return True
+    except Exception as exc:
+        print(f"SPARQL syntax error: {exc}")
+        return False
+
+
+def ensure_dataset_inputs(paths):
+    for key in ("modified_ttl", "summary"):
+        if not paths[key].exists():
+            raise FileNotFoundError(f"Missing benchmark input: {paths[key]}")
+
+
+def token_metrics(insert_runner):
+    return {
+        "input_tokens": getattr(insert_runner, "prompt_tokens", 0),
+        "output_tokens": getattr(insert_runner, "completion_tokens", 0),
+        "total_tokens": getattr(insert_runner, "total_tokens", 0),
+    }
+
+
+def write_raw_output(paths, output):
+    paths["raw_output"].parent.mkdir(parents=True, exist_ok=True)
+    paths["raw_output"].write_text(str(output), encoding="utf-8")
+
+
+def run_baseline(paths, model):
+    ensure_dataset_inputs(paths)
+    shutil.copy2(paths["modified_ttl"], paths["output_ttl"])
+
+    baseline = BaselineInsert(
+        modified_ttl_path=paths["modified_ttl"],
+        summary_file_path=paths["summary"],
+        model=model,
+    )
+    raw_output = baseline.send_messages(
+        "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
+    )
+    write_raw_output(paths, raw_output)
+    additions = extract_md_content(raw_output)
+
+    with open(paths["output_ttl"], "a", encoding="utf-8") as ttl_file:
+        ttl_file.write(
+            "\n\n"
+            "#######################################\n"
+            "# BASELINE GENERATION (PURE LLM) OUTPUT\n"
+            "#######################################\n\n"
+            f"{additions}\n"
+        )
+
+    return {
+        **token_metrics(baseline),
+        "ttl_syntax_valid": validate_ttl(paths["output_ttl"]),
+        "sparql_query_valid": "",
+    }
+
+
+def run_sparql(paths, model):
+    ensure_dataset_inputs(paths)
+    shutil.copy2(paths["modified_ttl"], paths["output_ttl"])
+
+    sparql_insert = SparQLInsert(
+        modified_ttl_path=paths["modified_ttl"],
+        summary_file_path=paths["summary"],
+        model=model,
+    )
+    raw_output = sparql_insert.send_messages(
+        """
+        ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY
+        PROVIDED IN THE FINAL ANSWER.
+        Output plain SPARQL only. Do not wrap it in markdown fences.
+        """
+    )
+    write_raw_output(paths, raw_output)
+    sparql_output = normalize_sparql_batch(raw_output)
+    sparql_query_valid = is_valid_sparql_update(sparql_output)
+
+    if sparql_query_valid:
+        graph = Graph()
+        graph.parse(paths["output_ttl"], format="turtle")
+        graph.update(sparql_output)
+        graph.serialize(destination=paths["output_ttl"], format="turtle")
+
+    return {
+        **token_metrics(sparql_insert),
+        "ttl_syntax_valid": validate_ttl(paths["output_ttl"]),
+        "sparql_query_valid": sparql_query_valid,
+    }
+
+
+def run_agent(paths, model, max_turns):
+    ensure_dataset_inputs(paths)
+    shutil.copy2(paths["modified_ttl"], paths["output_ttl"])
+
+    agent_insert = AgentInsert(
+        modified_ttl_path=paths["output_ttl"],
+        summary_file_path=paths["summary"],
+        model=model,
+    )
+    raw_output = agent_insert.run(max_turns=max_turns)
+    write_raw_output(paths, raw_output)
+
+    return {
+        **token_metrics(agent_insert),
+        "ttl_syntax_valid": validate_ttl(paths["output_ttl"]),
+        "sparql_query_valid": "",
+    }
+
+
+def run_one_benchmark(dataset_root, experiment_type, community, model, max_turns, run_id):
+    paths = dataset_paths(dataset_root, experiment_type, community, run_id)
+    started_at = datetime.now(timezone.utc).isoformat()
+    elapsed_seconds = 0
+    metrics = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "ttl_syntax_valid": False,
+        "sparql_query_valid": "",
+    }
+    error = ""
+
+    start = perf_counter()
+    try:
+        if experiment_type == "agent":
+            metrics.update(run_agent(paths, model, max_turns))
+        elif experiment_type == "baseline":
+            metrics.update(run_baseline(paths, model))
+        elif experiment_type == "sparql":
+            metrics.update(run_sparql(paths, model))
+        else:
+            raise ValueError(f"Unsupported experiment type: {experiment_type}")
+    except Exception as exc:
+        error = f"{type(exc).__name__}: {exc}"
+        print(error)
+        traceback.print_exc()
+    finally:
+        elapsed_seconds = perf_counter() - start
+
+    return {
+        "run_id": run_id,
+        "run_timestamp_utc": started_at,
+        "community_pruned": community,
+        "model": model,
+        "experiment_type": experiment_type,
+        "dataset_dir": str(paths["dataset_dir"]),
+        "input_ttl_path": str(paths["input_ttl"]),
+        "detached_ground_truth_ttl_path": str(paths["detached_ttl"]),
+        "modified_original_ttl_path": str(paths["modified_ttl"]),
+        "summary_path": str(paths["summary"]),
+        "output_ttl_path": str(paths["output_ttl"]),
+        "raw_model_output_path": str(paths["raw_output"]),
+        "elapsed_seconds": round(elapsed_seconds, 6),
+        "ttl_syntax_valid": metrics["ttl_syntax_valid"],
+        "sparql_query_valid": metrics["sparql_query_valid"],
+        "input_tokens": metrics["input_tokens"],
+        "output_tokens": metrics["output_tokens"],
+        "total_tokens": metrics["total_tokens"],
+        "ground_truth_alignment": "",
+        "error": error,
+    }
+
+
+def append_results(csv_path, rows):
+    csv_path = Path(csv_path)
+    new_df = pd.DataFrame(rows, columns=BENCHMARK_COLUMNS)
+    if csv_path.exists():
+        existing_df = pd.read_csv(csv_path)
+        merged_df = pd.concat([existing_df, new_df], ignore_index=True)
+    else:
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        merged_df = new_df
+    merged_df.to_csv(csv_path, index=False)
+    return csv_path
+
+
+def read_ontology_csv(ontology_csv=INPUT_CSV):
+    df = pd.read_csv(ontology_csv)
+    df.columns = df.columns.str.strip()
+    if "status" not in df.columns:
+        df["status"] = ""
+    df["status"] = df["status"].fillna("").astype(str).str.strip()
+    return df
+
+
+def mark_community_done(community, ontology_csv=INPUT_CSV):
+    ontology_csv = Path(ontology_csv)
+    df = read_ontology_csv(ontology_csv)
+    mask = df["communities"].astype(str) == str(community)
+    df.loc[mask, "status"] = "done"
+    df.to_csv(ontology_csv, index=False)
+
+
+def communities_from_args(args):
+    communities = list(args.community)
+    if args.all_communities:
+        df = read_ontology_csv(INPUT_CSV)
+        if args.pending_only:
+            df = df.loc[df["status"] != "done"]
+
+        communities.extend(
+            df["communities"].dropna().astype(str).tolist()
+        )
+        
+    return list(dict.fromkeys(communities))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run insertion benchmarks and append one pandas CSV row per experiment run."
+    )
+    parser.add_argument(
+        "--experiment",
+        choices=EXPERIMENT_TYPES,
+        nargs="+",
+        default=list(EXPERIMENT_TYPES),
+        help="Experiment type(s) to run. Defaults to all three.",
+    )
+    parser.add_argument(
+        "--community",
+        action="append",
+        default=[],
+        help="Pruned community to benchmark. Can be passed multiple times.",
+    )
+    parser.add_argument(
+        "--all-communities",
+        action="store_true",
+        help="Benchmark every community listed in Ontology_IN.csv.",
+    )
+    parser.add_argument(
+        "--pending-only",
+        action="store_true",
+        help="With --all-communities, only benchmark rows whose status is not done.",
+    )
+    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--max-turns", type=int, default=12)
+    parser.add_argument("--dataset-root", default=PROJECT_ROOT / "dataset")
+    parser.add_argument("--csv", default=PROJECT_ROOT / "benchmark_results2.csv")
+    parser.add_argument("--run-id", default=None)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    communities = communities_from_args(args)
+    if not communities:
+        raise SystemExit("Pass --community <name> or --all-communities.")
+
+    run_id = args.run_id or uuid4().hex
+    rows = []
+    for community in communities:
+        for experiment_type in args.experiment:
+            print(f"Running {experiment_type} benchmark for {community}")
+            rows.append(
+                run_one_benchmark(
+                    dataset_root=args.dataset_root,
+                    experiment_type=experiment_type,
+                    community=community,
+                    model=args.model,
+                    max_turns=args.max_turns,
+                    run_id=run_id,
+                )
+            )
+        mark_community_done(community)
+
+        print("entering NVIDIA NIM downtime...")
+        time.sleep(60)
+
+    csv_path = append_results(args.csv, rows)
+    print(f"Wrote {len(rows)} benchmark row(s) to {csv_path}")
+
+
+if __name__ == "__main__":
+    main()

@@ -3,11 +3,13 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
+DEFAULT_MODEL = "moonshotai/kimi-k2.6"
+
 # Similar to BaselineInsert, but instead of having OpenAI generate .ttl file, it will
 # generate SPARQL operations (insert/delete/update)to reduce write overhead
 # the SPARQL would then get parsed into the Graph using RDFLib
 class SparQLInsert:
-    def __init__(self, modified_ttl_path, summary_file_path):
+    def __init__(self, modified_ttl_path, summary_file_path, model=DEFAULT_MODEL):
         # load in the graph, and then insert elems using SparQL commands
         
         # might be better to just write out SPARQL commands than actual ttl source file. 
@@ -19,6 +21,7 @@ class SparQLInsert:
         self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
                              base_url="https://integrate.api.nvidia.com/v1"
                             )
+        self.model = model
         self.modified_ttl_path = open(modified_ttl_path, "r").read()
         self.summary = open(summary_file_path, "r").read()
         self.prompt_tokens = 0
@@ -40,7 +43,7 @@ class SparQLInsert:
     def send_messages(self, message):
         self.messages.append({"role": "user", "content": str(message)})
         response = self.client.chat.completions.create(
-            model="moonshotai/kimi-k2.6",
+            model=self.model,
             messages=self.messages
         )
         content = response.choices[0].message.content

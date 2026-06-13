@@ -1,2 +1,4 @@
 openai
 dotenv
+pandas
+rdflib

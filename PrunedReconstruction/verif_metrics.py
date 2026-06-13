@@ -13,10 +13,13 @@ def validate_ttl(file_path):
     try:
         g.parse(file_path, format="ttl")
         print(f"TTL Syntax OK ✅")
+        return True
     except BadSyntax as e:
         print(f"Error: bad syntax - {e}")
+        return False
     except Exception as e:
         print(f"An unknown error occurred - {e}")
+        return False
 
 # execution time (for reinsertion ONLY)
 def total_time_taken(script_path):

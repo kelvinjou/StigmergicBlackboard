@@ -2,12 +2,15 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
+DEFAULT_MODEL = "moonshotai/kimi-k2.6"
+
 class BaselineInsert:
-    def __init__(self, modified_ttl_path, summary_file_path):
+    def __init__(self, modified_ttl_path, summary_file_path, model=DEFAULT_MODEL):
         load_dotenv()
         self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
                              base_url="https://integrate.api.nvidia.com/v1"
                             )
+        self.model = model
         self.modified_ttl_path = open(modified_ttl_path, "r").read()
         self.summary = open(summary_file_path, "r").read()
         self.prompt_tokens = 0
@@ -30,7 +33,7 @@ class BaselineInsert:
     def send_messages(self, message):
         self.messages.append({"role": "user", "content": str(message)})
         response = self.client.chat.completions.create(
-            model="moonshotai/kimi-k2.6",
+            model=self.model,
             messages=self.messages
         )
         content = response.choices[0].message.content
@@ -52,5 +55,4 @@ if __name__ == "__main__":
     message = "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
     response = llm.send_messages(message)
     print(response)
-
 
