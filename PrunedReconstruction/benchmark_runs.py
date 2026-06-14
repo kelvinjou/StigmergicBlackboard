@@ -304,16 +304,34 @@ def mark_community_done(community, ontology_csv=INPUT_CSV):
 
 
 def communities_from_args(args):
-    communities = list(args.community)
+    df = read_ontology_csv(INPUT_CSV)
+    community_status_df = df.loc[df["communities"].notna(), ["communities", "status"]]
+    status_by_community = dict(
+        zip(
+            community_status_df["communities"].astype(str),
+            community_status_df["status"].str.lower(),
+        )
+    )
+
+    skipped_done = []
+    communities = []
+    for community in args.community:
+        if status_by_community.get(str(community)) == "done":
+            skipped_done.append(str(community))
+            continue
+        communities.append(community)
+
     if args.all_communities:
-        df = read_ontology_csv(INPUT_CSV)
-        if args.pending_only:
-            df = df.loc[df["status"] != "done"]
+        df = df.loc[df["status"].str.lower() != "done"]
 
         communities.extend(
             df["communities"].dropna().astype(str).tolist()
         )
-        
+
+    if skipped_done:
+        label = "community" if len(skipped_done) == 1 else "communities"
+        print(f"Skipping already done {label}: {', '.join(skipped_done)}")
+
     return list(dict.fromkeys(communities))
 
 
@@ -342,7 +360,7 @@ def parse_args():
     parser.add_argument(
         "--pending-only",
         action="store_true",
-        help="With --all-communities, only benchmark rows whose status is not done.",
+        help="Deprecated; rows whose status is done are always skipped.",
     )
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--max-turns", type=int, default=12)

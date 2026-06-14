@@ -4,18 +4,15 @@ from textwrap import dedent
 
 from rdflib import Graph, Literal, Namespace, URIRef, RDFS, RDF, OWL
 
-
 TTL_PATH = "enhanced_xr.ttl"
 
 class Tools:
-
     def __init__(self, ttl_path: str = TTL_PATH):
         self.ttl_path = ttl_path
         self.g = Graph()
         self.g.parse(self.ttl_path, format="ttl")
         self.default_namespace = self._default_namespace()
         self.ontology = Namespace(str(self.default_namespace))
-
 
     def _local_name(self, uri) -> str:
         uri_str = str(uri)
@@ -352,70 +349,3 @@ class Tools:
                 break
 
         return [self._local_name(uri) for uri in visited]
-
-    def add_evidence(self, target_class_name: str, evidence: str):
-        """
-        Adds a user-provided grounded evidence class under an existing TTL/RDF class.
-
-        The new evidence node is modeled as an owl:Class so it can participate in
-        the existing subclass hierarchy. It is also typed as :GroundedEvidence and
-        linked back to the supported concept with :isGroundedEvidenceFor.
-
-        Args:
-            target_class_name (str): Existing local TTL class identifier that the
-                evidence supports, such as "HeadMountedDisplay".
-            evidence (str): Quantitative or qualitative evidence supporting an
-                aspect of the target concept.
-
-        Returns:
-            dict: A structured result containing the evidence node identifier,
-                supported class, hierarchical insertion path, and original
-                evidence text.
-        """
-        if not evidence or not evidence.strip():
-            raise ValueError("Evidence text cannot be empty.")
-
-        target_uri = self._resolve_ttl_identifier(target_class_name)
-        if (target_uri, None, None) not in self.g:
-            raise ValueError(f"Could not find target class: {target_class_name}")
-
-        self._ensure_grounded_evidence_schema()
-
-        target_local_name = self._local_name(target_uri)
-        evidence_name = self._unique_evidence_name(target_local_name, evidence)
-        evidence_uri = URIRef(str(self.default_namespace) + evidence_name)
-        evidence_literal = Literal(evidence.strip(), lang="en")
-
-        self.g.add((evidence_uri, RDF.type, OWL.Class))
-        self.g.add((evidence_uri, RDF.type, self.ontology.GroundedEvidence))
-        self.g.add((evidence_uri, RDFS.label, Literal(f"Evidence for {target_local_name}", lang="en")))
-        self.g.add((evidence_uri, RDFS.subClassOf, target_uri))
-        self.g.add((evidence_uri, RDFS.comment, evidence_literal))
-        self.g.add((evidence_uri, self.ontology.isGroundedEvidenceFor, target_uri))
-
-        ttl_block = dedent(f"""
-###############################################################################
-# USER-GROUNDED EVIDENCE ADDED {date.today().isoformat()}
-###############################################################################
-
-:{evidence_name} rdf:type owl:Class ,
-                          :GroundedEvidence ;
-    rdfs:label "Evidence for {target_local_name}"@en ;
-    rdfs:subClassOf {self._compact_uri(target_uri)} ;
-    rdfs:comment "{self._escape_turtle_literal(evidence.strip())}"@en ;
-    :isGroundedEvidenceFor {self._compact_uri(target_uri)} .
-""")
-        self._append_ttl_block(ttl_block)
-        self._verify_ttl_file()
-
-        path = self._class_path(evidence_uri)
-
-        return {
-            "target_class_name": target_local_name,
-            "evidence_class_name": evidence_name,
-            "evidence": evidence.strip(),
-            "ttl_path": self.ttl_path,
-            "persisted": True,
-            "path": path,
-            "path_string": " > ".join(path),
-        }

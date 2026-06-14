@@ -823,3 +823,62 @@
     rdfs:label "Domain Concept"@en ;
     :coveredInChapter :Ch1 .
 
+
+
+#######################################
+# BASELINE GENERATION (PURE LLM) OUTPUT
+#######################################
+
+@prefix : <http://example.org/3dui-ontology#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:WayfindingTechnique a owl:Class ;
+    rdfs:label "Wayfinding Technique"@en ;
+    :coveredInChapter :Ch8 ;
+    rdfs:comment "Methods that assist the user in maintaining and recovering spatial orientation during navigation."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:TrailCues a owl:Class ;
+    rdfs:label "Trail Cues"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Continuous visual rendering of the path traversed by the user to support backtracking and route memory."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Breadcrumbs a owl:Class ;
+    rdfs:label "Breadcrumbs"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Discrete markers placed at key locations to establish a return path or mark significant waypoints in the environment."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Compass a owl:Class ;
+    rdfs:label "Compass"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Egocentric directional indicator that presents a fixed global reference direction to maintain orientation."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:VirtualMap a owl:Class ;
+    rdfs:label "Virtual Map"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Abstracted overhead or three-dimensional spatial overview that externalizes the cognitive map for planning and orientation."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Signage a owl:Class ;
+    rdfs:label "Signage"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Textual or symbolic labels placed within the environment to encode semantic information about regions, destinations, or paths."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:ArchitecturalSubdivisions a owl:Class ;
+    rdfs:label "Architectural Subdivisions"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Structural environmental design that differentiates regions through distinct architectural features to create memorable, distinguishable spaces."@en ;
+    rdfs:subClassOf :WayfindingTechnique .

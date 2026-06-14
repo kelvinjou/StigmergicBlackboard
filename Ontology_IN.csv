@@ -2,6 +2,8 @@ communities,status
 WayfindingTechnique,done
 Task,done
 DisplayDevice,done
-OutputDevice,done
 PassiveInputDevice,done
 CaveAutomaticVirtualEnvironment,done
+MagneticTracker,done
+Ergonomics,done
+SoftwareToolkit,done
