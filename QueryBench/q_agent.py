@@ -31,9 +31,30 @@ class QueryAgent:
         self.messages.append(
             {
                 "role": "system",
-                "content": "Root class name: 'Concept' " + self.system_msg
+                "content": 
+                    """
+                    You are a knowledge-graph question-answering assistant for an extended reality (XR) ontology.
+
+                    You will be given:
+                    - A user question about XR concepts in the ontology.
+
+                    Your job is to answer the question using only ontology information. Do not invent ontology
+                    triples, class definitions, labels, comments, or relationships that were not
+                    returned in an Observation.
+
+                    When you have enough observations, respond:
+                    Final Answer: {your complete answer to the question}
+                    """ + 
+                    "Root class name: 'Concept' " + self.system_msg
             }
         )
+        self.tools = Tools()
+        self.known_tools = {
+            "query_subclass": self.tools.query_subclass,
+            "inspect_class": self.tools.inspect_class,
+            "get_class_info": self.tools.inspect_class,
+            "recurse_n_layers": self.tools.recurse_n_layers,
+        }
 
     def send_messages(self, message):
         self.messages.append({"role": "user", "content": str(message)})
@@ -48,114 +69,110 @@ class QueryAgent:
             self.completion_tokens += response.usage.completion_tokens or 0
             self.total_tokens += response.usage.total_tokens or 0
         return content
-    
-def _extract_action(message):
-    action_regex = re.compile(r"^Action:\s*(.+?)\s*$")
-    input_regex = re.compile(r"^Action Input:\s*(.+?)\s*$")
 
-    action = None
-    action_input = None
+    def _extract_action(self, message):
+        action_regex = re.compile(r"^Action:\s*(.+?)\s*$")
+        input_regex = re.compile(r"^Action Input:\s*(.+?)\s*$")
 
-    for line in message.split("\n"):
-        action_match = action_regex.match(line)
-        input_match = input_regex.match(line)
+        action = None
+        action_input = None
 
-        if action_match:
-            action = action_match.group(1).strip()
-        elif input_match:
-            action_input = input_match.group(1).strip()
+        for line in message.split("\n"):
+            action_match = action_regex.match(line)
+            input_match = input_regex.match(line)
 
-    return action, action_input
+            if action_match:
+                action = action_match.group(1).strip()
+            elif input_match:
+                action_input = input_match.group(1).strip()
 
-def _extract_answer(message):
-    answer_match = re.search(
-        r"(?ms)^(?:Final Answer|Answer):\s*(.+?)(?=\n(?:Thought|Action|Action Input):|\Z)",
-        message,
-    )
-    if answer_match:
-        return answer_match.group(1).strip()
+        return action, action_input
 
-    return None
+    def _extract_answer(self, message):
+        answer_match = re.search(
+            r"(?ms)^(?:Final Answer|Answer):\s*(.+?)(?=\n(?:Thought|Action|Action Input):|\Z)",
+            message,
+        )
+        if answer_match:
+            return answer_match.group(1).strip()
 
-def _normalize_action_input(action_input):
-    if action_input is None:
         return None
 
-    action_input = action_input.strip()
-    if not action_input:
-        return action_input
+    def _normalize_action_input(self, action_input):
+        if action_input is None:
+            return None
 
-    try:
-        parsed = json.loads(action_input)
-    except json.JSONDecodeError:
-        return action_input.strip("\"'")
+        action_input = action_input.strip()
+        if not action_input:
+            return action_input
 
-    if isinstance(parsed, dict) and len(parsed) == 1:
-        for key in ("parent_class", "parent_class_name", "target_class", "target_class_name"):
-            if key in parsed:
-                return parsed[key]
+        try:
+            parsed = json.loads(action_input)
+        except json.JSONDecodeError:
+            return action_input.strip("\"'")
 
-    return parsed
+        if isinstance(parsed, dict) and len(parsed) == 1:
+            for key in ("parent_class", "parent_class_name", "target_class", "target_class_name"):
+                if key in parsed:
+                    return parsed[key]
 
-def _print_token_usage(agent):
-    print(
-        "Token usage: "
-        f"prompt={agent.prompt_tokens}, "
-        f"completion={agent.completion_tokens}, "
-        f"total={agent.total_tokens}"
-    )
+        return parsed
+
+    def _print_token_usage(self):
+        print(
+            "Token usage: "
+            f"prompt={self.prompt_tokens}, "
+            f"completion={self.completion_tokens}, "
+            f"total={self.total_tokens}"
+        )
+
+    def query(self, user_input, max_turns=10):
+        next_message = user_input
+
+        for _ in range(max_turns):
+            response = self.send_messages(next_message)
+            print(response)
+            print()
+
+            answer = self._extract_answer(response)
+            if answer:
+                self._print_token_usage()
+                return answer
+
+            action, action_input = self._extract_action(response)
+
+            if not action:
+                self._print_token_usage()
+                return response
+
+            if action not in self.known_tools:
+                next_message = (
+                    f"Observation: Unknown tool '{action}'. "
+                    f"Available tools: {', '.join(self.known_tools)}"
+                )
+                continue
+
+            tool_input = self._normalize_action_input(action_input)
+            try:
+                if isinstance(tool_input, dict):
+                    result = self.known_tools[action](**tool_input)
+                else:
+                    result = self.known_tools[action](tool_input)
+            except Exception as exc:
+                result = {"error": str(exc), "tool": action}
+            next_message = "Observation: " + json.dumps(result, ensure_ascii=False)
+
+        self._print_token_usage()
+        return None
 
 def agent_query(user_input, max_turns=10):
     agent = QueryAgent()
-    tools = Tools()
-    next_message = user_input
-
-    known_tools = {
-        "query_subclass": tools.query_subclass,
-        "inspect_class": tools.inspect_class,
-        "get_class_info": tools.inspect_class,
-        "recurse_n_layers": tools.recurse_n_layers,
-    }
-
-    for _ in range(max_turns):
-        response = agent.send_messages(next_message)
-        print(response)
-        print()
-
-        answer = _extract_answer(response)
-        if answer:
-            _print_token_usage(agent)
-            return answer
-
-        action, action_input = _extract_action(response)
-
-        if not action:
-            _print_token_usage(agent)
-            return response
-
-        if action not in known_tools:
-            next_message = (
-                f"Observation: Unknown tool '{action}'. "
-                f"Available tools: {', '.join(known_tools)}"
-            )
-            continue
-
-        tool_input = _normalize_action_input(action_input)
-        try:
-            if isinstance(tool_input, dict):
-                result = known_tools[action](**tool_input)
-            else:
-                result = known_tools[action](tool_input)
-        except Exception as exc:
-            result = {"error": str(exc), "tool": action}
-        next_message = "Observation: " + json.dumps(result, ensure_ascii=False)
-
-    _print_token_usage(agent)
-    return None
+    return agent.query(user_input, max_turns=max_turns)
 
 # QUERY ONLY
 if __name__ == "__main__":
     start = time.time()
-    agent_query("What are head mounted displays?")
+    qa = QueryAgent()
+    qa.query("What are head mounted displays?")
     end = time.time()
     print(f"Executed in {end - start} seconds.")

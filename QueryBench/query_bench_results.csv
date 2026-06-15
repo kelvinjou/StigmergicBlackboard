@@ -1,0 +1,7 @@
+run_id,run_timestamp,query_in_row_id,query,method,output_file_path,elapsed_seconds,prompt_tokens,completion_tokens,total_tokens
+920912e6-6874-11f1-a7a0-d5178762e247,2026-06-15T04:42:10.075938+00:00,1,What are head mounted displays?,agent,QueryBench/outputs/920912e6-6874-11f1-a7a0-d5178762e247_1_agent.txt,3.0680632920120843,976,193,1169
+920912e6-6874-11f1-a7a0-d5178762e247,2026-06-15T04:42:10.075938+00:00,1,What are head mounted displays?,baseline,QueryBench/outputs/920912e6-6874-11f1-a7a0-d5178762e247_1_baseline.txt,5.146809375000885,11239,148,11387
+e4de58dc-6874-11f1-bc4a-7b68d6c56778,2026-06-15T04:44:29.046817+00:00,1,What are head mounted displays?,agent,QueryBench/outputs/e4de58dc-6874-11f1-bc4a-7b68d6c56778_1_agent.txt,8.763450500002364,976,273,1249
+e4de58dc-6874-11f1-bc4a-7b68d6c56778,2026-06-15T04:44:29.046817+00:00,1,What are head mounted displays?,baseline,QueryBench/outputs/e4de58dc-6874-11f1-bc4a-7b68d6c56778_1_baseline.txt,11.588304832985159,11239,324,11563
+e4de58dc-6874-11f1-bc4a-7b68d6c56778,2026-06-15T04:44:29.046817+00:00,2,How is flying related to aperture?,agent,QueryBench/outputs/e4de58dc-6874-11f1-bc4a-7b68d6c56778_2_agent.txt,28.843134166992968,15641,879,16520
+e4de58dc-6874-11f1-bc4a-7b68d6c56778,2026-06-15T04:44:29.046817+00:00,2,How is flying related to aperture?,baseline,QueryBench/outputs/e4de58dc-6874-11f1-bc4a-7b68d6c56778_2_baseline.txt,11.829748583986657,11240,583,11823

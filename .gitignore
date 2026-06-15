@@ -4,3 +4,4 @@
 *.pyc
 /archive
 /dataset
+/QueryBench/outputs
