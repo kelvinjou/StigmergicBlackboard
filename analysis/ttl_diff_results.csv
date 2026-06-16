@@ -1,0 +1,29 @@
+run_id,community_pruned,model,experiment_type,ground_truth_triples,base_triples,reinserted_triples,shared_triples,missing_triples,extra_triples,triple_precision,triple_recall,triple_f1,exact_graph_match,error
+feed3c69c1f54dc0bb976958cb9be45d,WayfindingTechnique,moonshotai/kimi-k2.6,agent,41,682,0,0,41,0,0,0.0,0,False,
+feed3c69c1f54dc0bb976958cb9be45d,WayfindingTechnique,moonshotai/kimi-k2.6,baseline,41,682,41,35,6,6,0.8536585365853658,0.8536585365853658,0.8536585365853658,False,
+feed3c69c1f54dc0bb976958cb9be45d,WayfindingTechnique,moonshotai/kimi-k2.6,sparql,41,682,41,35,6,6,0.8536585365853658,0.8536585365853658,0.8536585365853658,False,
+feed3c69c1f54dc0bb976958cb9be45d,Task,moonshotai/kimi-k2.6,agent,66,657,0,0,66,0,0,0.0,0,False,
+feed3c69c1f54dc0bb976958cb9be45d,Task,moonshotai/kimi-k2.6,baseline,66,657,78,56,10,22,0.717948717948718,0.8484848484848485,0.7777777777777778,False,
+feed3c69c1f54dc0bb976958cb9be45d,Task,moonshotai/kimi-k2.6,sparql,66,657,178,58,8,120,0.3258426966292135,0.8787878787878788,0.4754098360655738,False,
+feed3c69c1f54dc0bb976958cb9be45d,DisplayDevice,moonshotai/kimi-k2.6,agent,34,689,25,12,22,13,0.48,0.35294117647058826,0.4067796610169491,False,
+feed3c69c1f54dc0bb976958cb9be45d,DisplayDevice,moonshotai/kimi-k2.6,baseline,34,689,36,20,14,16,0.5555555555555556,0.5882352941176471,0.5714285714285715,False,
+feed3c69c1f54dc0bb976958cb9be45d,DisplayDevice,moonshotai/kimi-k2.6,sparql,34,689,27,19,15,8,0.7037037037037037,0.5588235294117647,0.6229508196721312,False,
+b067521cceda4138988a09c43f6b7d99,PassiveInputDevice,moonshotai/kimi-k2.6,agent,4,719,4,4,0,0,1.0,1.0,1.0,True,
+b067521cceda4138988a09c43f6b7d99,PassiveInputDevice,moonshotai/kimi-k2.6,baseline,4,719,67,4,0,63,0.05970149253731343,1.0,0.11267605633802817,False,
+b067521cceda4138988a09c43f6b7d99,PassiveInputDevice,moonshotai/kimi-k2.6,sparql,4,719,4,4,0,0,1.0,1.0,1.0,True,
+b067521cceda4138988a09c43f6b7d99,CaveAutomaticVirtualEnvironment,moonshotai/kimi-k2.6,agent,5,718,5,5,0,0,1.0,1.0,1.0,True,
+b067521cceda4138988a09c43f6b7d99,CaveAutomaticVirtualEnvironment,moonshotai/kimi-k2.6,baseline,5,718,110,5,0,105,0.045454545454545456,1.0,0.08695652173913045,False,
+b067521cceda4138988a09c43f6b7d99,CaveAutomaticVirtualEnvironment,moonshotai/kimi-k2.6,sparql,5,718,5,5,0,0,1.0,1.0,1.0,True,
+af1d93e0a53143e6814f525b3e4da253,MagneticTracker,moonshotai/kimi-k2.6,agent,5,718,5,5,0,0,1.0,1.0,1.0,True,
+af1d93e0a53143e6814f525b3e4da253,MagneticTracker,moonshotai/kimi-k2.6,baseline,5,718,262,5,0,257,0.019083969465648856,1.0,0.03745318352059925,False,
+af1d93e0a53143e6814f525b3e4da253,MagneticTracker,moonshotai/kimi-k2.6,sparql,5,718,5,5,0,0,1.0,1.0,1.0,True,
+f8bc3ccea7124fc3b0dfb92b4b9bdc03,Ergonomics,moonshotai/kimi-k2.6,agent,7,716,21,4,3,17,0.19047619047619047,0.5714285714285714,0.2857142857142857,False,
+f8bc3ccea7124fc3b0dfb92b4b9bdc03,Ergonomics,moonshotai/kimi-k2.6,baseline,,,,,,,,,,,"at line 981 of <>:
+Bad syntax (objectList expected) at ^ in:
+""...b' strain.""@en ;\n    rdfs:subClassOf :Ergonomics .\n\n:AdaptToUs'^b'er rdfs:subClassOf [\n    owl:Restriction ;\n    owl:onPropert'..."""
+f8bc3ccea7124fc3b0dfb92b4b9bdc03,Ergonomics,moonshotai/kimi-k2.6,sparql,7,716,0,0,7,0,0,0.0,0,False,
+f8bc3ccea7124fc3b0dfb92b4b9bdc03,SoftwareToolkit,moonshotai/kimi-k2.6,agent,5,718,5,5,0,0,1.0,1.0,1.0,True,
+f8bc3ccea7124fc3b0dfb92b4b9bdc03,SoftwareToolkit,moonshotai/kimi-k2.6,baseline,,,,,,,,,,,"at line 919 of <>:
+Bad syntax (Prefix ""rd发言:"" not bound) at ^ in:
+""...b'nteraction purposes.""@en ;\n    rdfs:subClassOf :PassiveInput'^b'Device .\n\n:GorillaArm a owl:Class ;\n    rd\xe5\x8f\x91\xe8\xa8\x80:label ""Gori'..."""
+f8bc3ccea7124fc3b0dfb92b4b9bdc03,SoftwareToolkit,moonshotai/kimi-k2.6,sparql,5,718,0,0,5,0,0,0.0,0,False,
