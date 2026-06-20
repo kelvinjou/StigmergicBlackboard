@@ -68,7 +68,7 @@ class TTLDiffAnalysis:
 
     def run_agent_diffs(
         self,
-        benchmark_csv_path: str = "benchmark_results2.csv",
+        benchmark_csv_path: str = "benchmark_results.csv",
         output_csv_path: str = "analysis/ttl_diff_results.csv",
     ):
         output_fields = [
@@ -101,18 +101,21 @@ class TTLDiffAnalysis:
                     "community_pruned": row.get("community_pruned", ""),
                     "model": row.get("model", ""),
                     "experiment_type": row.get("experiment_type", ""),
-                    "error": "",
+                    "error": (row.get("error") or "").strip(),
                 }
 
-                try:
-                    metrics = self.ttlDiff(
-                        row["detached_ground_truth_ttl_path"],
-                        row["output_ttl_path"],
-                        row["modified_original_ttl_path"],
-                    )
-                    result_row.update(metrics)
-                except Exception as exc:
-                    result_row["error"] = str(exc)
+                # A failed benchmark may leave behind a stale or partial output TTL.
+                # Preserve its error and never calculate scores from that artifact.
+                if not result_row["error"]:
+                    try:
+                        metrics = self.ttlDiff(
+                            row["detached_ground_truth_ttl_path"],
+                            row["output_ttl_path"],
+                            row["modified_original_ttl_path"],
+                        )
+                        result_row.update(metrics)
+                    except Exception as exc:
+                        result_row["error"] = f"{type(exc).__name__}: {exc}"
 
                 output_rows.append(result_row)
 
@@ -218,4 +221,3 @@ if __name__ == "__main__":
             f"f1_mean={row['triple_f1_mean']}, "
             f"exact_match_rate={row['exact_match_rate']}"
         )
-

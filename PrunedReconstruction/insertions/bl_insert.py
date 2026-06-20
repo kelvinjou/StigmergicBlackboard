@@ -1,15 +1,21 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-import os
+import sys
+from pathlib import Path
 
-DEFAULT_MODEL = "moonshotai/kimi-k2.6"
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config import LLM_MODEL
+from LLMCompletionWrappers import client as llm_client
+
+DEFAULT_MODEL = LLM_MODEL
 
 class BaselineInsert:
     def __init__(self, modified_ttl_path, summary_file_path, model=DEFAULT_MODEL):
         load_dotenv()
-        self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
-                             base_url="https://integrate.api.nvidia.com/v1"
-                            )
+        self.client = llm_client
         self.model = model
         self.modified_ttl_path = open(modified_ttl_path, "r").read()
         self.summary = open(summary_file_path, "r").read()
@@ -55,4 +61,3 @@ if __name__ == "__main__":
     message = "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
     response = llm.send_messages(message)
     print(response)
-

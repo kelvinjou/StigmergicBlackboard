@@ -19,14 +19,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from config import INPUT_CSV, TRIALS_PER_COMMUNITY
 from PrunedReconstruction.insertions.agent_insert import AgentInsert, DEFAULT_MODEL
 from PrunedReconstruction.insertions.bl_insert import BaselineInsert
 from PrunedReconstruction.insertions.sparql_insert import SparQLInsert
 from PrunedReconstruction.verif_metrics import validate_ttl
 
-INPUT_CSV = PROJECT_ROOT / "Ontology_IN.csv"
-
-EXPERIMENT_TYPES = ("agent", "baseline", "sparql")
+EXPERIMENT_TYPES = ("agent", "agent_no_traversal", "baseline", "sparql")
 # EXPERIMENT_TYPES = ("agent",)
 
 BENCHMARK_COLUMNS = [
@@ -53,15 +52,30 @@ BENCHMARK_COLUMNS = [
 ]
 
 
-def dataset_paths(dataset_root, experiment_type, community, run_id):
+def dataset_paths(
+    dataset_root,
+    experiment_type,
+    community,
+    run_id,
+    preserve_trial_output=False,
+):
     dataset_dir = Path(dataset_root) / experiment_type / community
+    input_dataset_dir = dataset_dir
+    if experiment_type == "agent_no_traversal":
+        # Reuse the agent's exact pruning inputs so traversal is the only
+        # experimental variable. Keep generated output in a separate directory.
+        input_dataset_dir = Path(dataset_root) / "agent" / community
+
+    output_name = (
+        f"reinserted_{run_id}.ttl" if preserve_trial_output else "reinserted.ttl"
+    )
     return {
         "dataset_dir": dataset_dir,
         "input_ttl": PROJECT_ROOT / "enhanced_xr.ttl",
-        "detached_ttl": dataset_dir / "detached.ttl",
-        "modified_ttl": dataset_dir / "modified_original.ttl",
-        "summary": dataset_dir / "summary.txt",
-        "output_ttl": dataset_dir / "reinserted.ttl",
+        "detached_ttl": input_dataset_dir / "detached.ttl",
+        "modified_ttl": input_dataset_dir / "modified_original.ttl",
+        "summary": input_dataset_dir / "summary.txt",
+        "output_ttl": dataset_dir / output_name,
         "raw_output": dataset_dir / f"raw_model_output_{run_id}.txt",
     }
 
@@ -200,14 +214,16 @@ def run_sparql(paths, model):
     }
 
 
-def run_agent(paths, model, max_turns):
+def run_agent(paths, model, max_turns, allow_traversal=True):
     ensure_dataset_inputs(paths)
+    paths["output_ttl"].parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(paths["modified_ttl"], paths["output_ttl"])
 
     agent_insert = AgentInsert(
         modified_ttl_path=paths["output_ttl"],
         summary_file_path=paths["summary"],
         model=model,
+        allow_traversal=allow_traversal,
     )
     raw_output = agent_insert.run(max_turns=max_turns)
     write_raw_output(paths, raw_output)
@@ -219,8 +235,22 @@ def run_agent(paths, model, max_turns):
     }
 
 
-def run_one_benchmark(dataset_root, experiment_type, community, model, max_turns, run_id):
-    paths = dataset_paths(dataset_root, experiment_type, community, run_id)
+def run_one_benchmark(
+    dataset_root,
+    experiment_type,
+    community,
+    model,
+    max_turns,
+    run_id,
+    preserve_trial_output=False,
+):
+    paths = dataset_paths(
+        dataset_root,
+        experiment_type,
+        community,
+        run_id,
+        preserve_trial_output=preserve_trial_output,
+    )
     started_at = datetime.now(timezone.utc).isoformat()
     elapsed_seconds = 0
     metrics = {
@@ -236,6 +266,15 @@ def run_one_benchmark(dataset_root, experiment_type, community, model, max_turns
     try:
         if experiment_type == "agent":
             metrics.update(run_agent(paths, model, max_turns))
+        elif experiment_type == "agent_no_traversal":
+            metrics.update(
+                run_agent(
+                    paths,
+                    model,
+                    max_turns,
+                    allow_traversal=False,
+                )
+            )
         elif experiment_type == "baseline":
             metrics.update(run_baseline(paths, model))
         elif experiment_type == "sparql":
@@ -316,13 +355,17 @@ def communities_from_args(args):
     skipped_done = []
     communities = []
     for community in args.community:
-        if status_by_community.get(str(community)) == "done":
+        if (
+            not args.include_done
+            and status_by_community.get(str(community)) == "done"
+        ):
             skipped_done.append(str(community))
             continue
         communities.append(community)
 
     if args.all_communities:
-        df = df.loc[df["status"].str.lower() != "done"]
+        if not args.include_done:
+            df = df.loc[df["status"].str.lower() != "done"]
 
         communities.extend(
             df["communities"].dropna().astype(str).tolist()
@@ -335,6 +378,13 @@ def communities_from_args(args):
     return list(dict.fromkeys(communities))
 
 
+def positive_int(value):
+    value = int(value)
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return value
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run insertion benchmarks and append one pandas CSV row per experiment run."
@@ -344,7 +394,7 @@ def parse_args():
         choices=EXPERIMENT_TYPES,
         nargs="+",
         default=list(EXPERIMENT_TYPES),
-        help="Experiment type(s) to run. Defaults to all three.",
+        help="Experiment type(s) to run. Defaults to all four.",
     )
     parser.add_argument(
         "--community",
@@ -360,13 +410,30 @@ def parse_args():
     parser.add_argument(
         "--pending-only",
         action="store_true",
-        help="Deprecated; rows whose status is done are always skipped.",
+        help="Deprecated; done rows are skipped unless --include-done is set.",
+    )
+    parser.add_argument(
+        "--include-done",
+        action="store_true",
+        help=(
+            "Include communities marked done. Useful for running a newly added "
+            "experiment against existing pruning inputs."
+        ),
     )
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--max-turns", type=int, default=12)
     parser.add_argument("--dataset-root", default=PROJECT_ROOT / "dataset")
-    parser.add_argument("--csv", default=PROJECT_ROOT / "benchmark_results2.csv")
+    parser.add_argument("--csv", default=PROJECT_ROOT / "benchmark_results.csv")
     parser.add_argument("--run-id", default=None)
+    parser.add_argument(
+        "--trials-per-community",
+        type=positive_int,
+        default=TRIALS_PER_COMMUNITY,
+        help=(
+            "Number of trials to run for each community. "
+            f"Defaults to config.TRIALS_PER_COMMUNITY ({TRIALS_PER_COMMUNITY})."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -376,25 +443,36 @@ def main():
     if not communities:
         raise SystemExit("Pass --community <name> or --all-communities.")
 
-    run_id = args.run_id or uuid4().hex
     rows = []
     for community in communities:
-        for experiment_type in args.experiment:
-            print(f"Running {experiment_type} benchmark for {community}")
-            rows.append(
-                run_one_benchmark(
-                    dataset_root=args.dataset_root,
-                    experiment_type=experiment_type,
-                    community=community,
-                    model=args.model,
-                    max_turns=args.max_turns,
-                    run_id=run_id,
+        for trial_number in range(1, args.trials_per_community + 1):
+            if args.run_id and args.trials_per_community == 1:
+                run_id = args.run_id
+            elif args.run_id:
+                run_id = f"{args.run_id}-trial-{trial_number}"
+            else:
+                run_id = uuid4().hex
+
+            for experiment_type in args.experiment:
+                print(
+                    f"Running {experiment_type} benchmark for {community} "
+                    f"(trial {trial_number}/{args.trials_per_community})"
                 )
-            )
+                rows.append(
+                    run_one_benchmark(
+                        dataset_root=args.dataset_root,
+                        experiment_type=experiment_type,
+                        community=community,
+                        model=args.model,
+                        max_turns=args.max_turns,
+                        run_id=run_id,
+                        preserve_trial_output=args.trials_per_community > 1,
+                    )
+                )
         mark_community_done(community)
 
-        print("entering NVIDIA NIM downtime...")
-        time.sleep(60)
+        # print("entering NVIDIA NIM downtime...")
+        # time.sleep(60)
 
     csv_path = append_results(args.csv, rows)
     print(f"Wrote {len(rows)} benchmark row(s) to {csv_path}")

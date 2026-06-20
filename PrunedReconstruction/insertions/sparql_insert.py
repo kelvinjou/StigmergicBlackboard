@@ -1,9 +1,16 @@
-import os
+import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
 
-DEFAULT_MODEL = "moonshotai/kimi-k2.6"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config import LLM_MODEL
+from LLMCompletionWrappers import client as llm_client
+
+DEFAULT_MODEL = LLM_MODEL
 
 # Similar to BaselineInsert, but instead of having OpenAI generate .ttl file, it will
 # generate SPARQL operations (insert/delete/update)to reduce write overhead
@@ -18,9 +25,7 @@ class SparQLInsert:
         # give it a Graph or the raw source file?
         # give it the raw source file, input would be the same, but output would be less?
         load_dotenv()
-        self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
-                             base_url="https://integrate.api.nvidia.com/v1"
-                            )
+        self.client = llm_client
         self.model = model
         self.modified_ttl_path = open(modified_ttl_path, "r").read()
         self.summary = open(summary_file_path, "r").read()

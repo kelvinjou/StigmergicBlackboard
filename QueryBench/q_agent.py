@@ -1,12 +1,18 @@
 import json
 import importlib.util
-import os
-from pathlib import Path
 import re
+import sys
 import time
+from pathlib import Path
 
-from openai import OpenAI
 from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config import LLM_MODEL
+from LLMCompletionWrappers import client as llm_client
 
 if __package__:
     from .tools import Tools
@@ -18,11 +24,10 @@ else:
     Tools = tools_module.Tools
 
 class QueryAgent:
-    def __init__(self):
+    def __init__(self, model=LLM_MODEL):
         load_dotenv()
-        self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
-                             base_url="https://integrate.api.nvidia.com/v1"
-                            )
+        self.client = llm_client
+        self.model = model
         self.system_msg = open("QueryBench/system_prompt.md", "r").read()
         self.prompt_tokens = 0
         self.completion_tokens = 0
@@ -59,7 +64,7 @@ class QueryAgent:
     def send_messages(self, message):
         self.messages.append({"role": "user", "content": str(message)})
         response = self.client.chat.completions.create(
-            model="moonshotai/kimi-k2.6",
+            model=self.model,
             messages=self.messages
         )
         content = response.choices[0].message.content

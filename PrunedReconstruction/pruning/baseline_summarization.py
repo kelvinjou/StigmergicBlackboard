@@ -1,17 +1,24 @@
-import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config import LLM_MODEL
+from LLMCompletionWrappers import client as llm_client
 
 class BaselineSummarization:
-    def __init__(self, ttl_path=PROJECT_ROOT / "enhanced_xr.ttl"):
+    def __init__(
+        self,
+        ttl_path=PROJECT_ROOT / "enhanced_xr.ttl",
+        model=LLM_MODEL,
+    ):
         load_dotenv()
-        self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
-                             base_url="https://integrate.api.nvidia.com/v1"
-                            )
+        self.client = llm_client
+        self.model = model
         self.raw_ttl = Path(ttl_path).read_text()
         self.prompt_tokens = 0
         self.completion_tokens = 0
@@ -28,7 +35,7 @@ class BaselineSummarization:
     def send_messages(self, message):
         self.messages.append({"role": "user", "content": str(message)})
         response = self.client.chat.completions.create(
-            model="moonshotai/kimi-k2.6",
+            model=self.model,
             messages=self.messages,
             max_tokens=self.max_tokens
         )

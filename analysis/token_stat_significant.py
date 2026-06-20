@@ -1,7 +1,7 @@
 from scipy import stats
 import pandas as pd
 
-df = pd.read_csv("benchmark_results2.csv")
+df = pd.read_csv("benchmark_results.csv")
 agent_group = df.loc[df["experiment_type"] == "agent", "total_tokens"].dropna().to_numpy()
 baseline_group = df.loc[df["experiment_type"] == "baseline", "total_tokens"].dropna().to_numpy()
 sparql_group = df.loc[df["experiment_type"] == "sparql", "total_tokens"].dropna().to_numpy()
@@ -13,7 +13,7 @@ sparql_group = df.loc[df["experiment_type"] == "sparql", "total_tokens"].dropna(
 #     )
 
 # t-tests
-t_stat, p_value = stats.ttest_ind(agent_group, sparql_group, equal_var=False)
+t_stat, p_value = stats.ttest_ind(agent_group, baseline_group, equal_var=False)
 
 print(f"T-statistic: {t_stat:.4f}")
 print(f"P-value: {p_value:.4e}")
