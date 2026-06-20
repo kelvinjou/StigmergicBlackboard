@@ -1,9 +1,9 @@
 communities,status
-WayfindingTechnique,untested
-Task,untested
-DisplayDevice,untested
-PassiveInputDevice,untested
-CaveAutomaticVirtualEnvironment,untested
-MagneticTracker,untested
-Ergonomics,untested
-SoftwareToolkit,untested
+WayfindingTechnique,done
+Task,done
+DisplayDevice,done
+PassiveInputDevice,done
+CaveAutomaticVirtualEnvironment,done
+MagneticTracker,done
+Ergonomics,done
+SoftwareToolkit,done
