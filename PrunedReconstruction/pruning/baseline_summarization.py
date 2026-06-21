@@ -24,7 +24,7 @@ class BaselineSummarization:
         self.completion_tokens = 0
         self.total_tokens = 0
         self.messages = []
-        self.max_tokens = 500
+        # self.max_tokens = 500
         self.messages.append(
             {
                 "role": "system",
@@ -37,7 +37,7 @@ class BaselineSummarization:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=self.messages,
-            max_tokens=self.max_tokens
+            # max_tokens=self.max_tokens
         )
         content = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": content})

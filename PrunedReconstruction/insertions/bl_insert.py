@@ -7,16 +7,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from config import LLM_MODEL
+from config import LLM_MODEL, LLM_TEMPERATURE, LLM_TOP_P
 from LLMCompletionWrappers import client as llm_client
 
 DEFAULT_MODEL = LLM_MODEL
 
 class BaselineInsert:
-    def __init__(self, modified_ttl_path, summary_file_path, model=DEFAULT_MODEL):
+    def __init__(
+        self,
+        modified_ttl_path,
+        summary_file_path,
+        model=DEFAULT_MODEL,
+        temperature=LLM_TEMPERATURE,
+        top_p=LLM_TOP_P,
+    ):
         load_dotenv()
         self.client = llm_client
         self.model = model
+        self.temperature = temperature
+        self.top_p = top_p
         self.modified_ttl_path = open(modified_ttl_path, "r").read()
         self.summary = open(summary_file_path, "r").read()
         self.prompt_tokens = 0
@@ -40,7 +49,9 @@ class BaselineInsert:
         self.messages.append({"role": "user", "content": str(message)})
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=self.messages
+            messages=self.messages,
+            temperature=self.temperature,
+            top_p=self.top_p,
         )
         content = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": content})

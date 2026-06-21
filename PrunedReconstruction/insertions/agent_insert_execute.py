@@ -1,3 +1,4 @@
+import json
 import shutil
 import sys
 import argparse
@@ -27,6 +28,7 @@ def dataset_paths(experiment_type=DEFAULT_EXPERIMENT_TYPE, community=None, datas
         "src_ttl": dataset_dir / "modified_original.ttl",
         "dest_ttl": dataset_dir / "reinserted.ttl",
         "summary": dataset_dir / "summary.txt",
+        "plan": dataset_dir / "reconstruction_plan.json",
     }
 
 
@@ -66,8 +68,17 @@ def run_agent_insert(
         model=model,
     )
     result = agent_insert.run(max_turns=max_turns)
+    paths["plan"].write_text(
+        json.dumps(
+            agent_insert.tools.plan_artifact(),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
 
     print(result)
+    print(f"Reconstruction plan: {paths['plan']}")
     print(
         "Token usage: "
         f"prompt={agent_insert.prompt_tokens}, "

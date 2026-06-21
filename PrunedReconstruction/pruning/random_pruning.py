@@ -25,15 +25,29 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from PrunedReconstruction.pruning.baseline_summarization import BaselineSummarization
-from agent import agent_query
+ONTOLOGY_CSV = PROJECT_ROOT / "Ontology_IN.csv"
+DATASET_ROOT = PROJECT_ROOT / "dataset"
+EXPERIMENT_TYPES = ("baseline", "sparql", "agent")
 
 
-df = pd.read_csv('/Users/kelvinjou/Documents/GitHub/OntologyAgent/Ontology_IN.csv')
-COMMUNITIES = df['communities'].loc[df["status"] != "done"]
+def missing_experiment_types(community):
+    return tuple(
+        experiment_type
+        for experiment_type in EXPERIMENT_TYPES
+        if not (DATASET_ROOT / experiment_type / community).is_dir()
+    )
+
+
+df = pd.read_csv(ONTOLOGY_CSV)
+COMMUNITIES = (
+    df["communities"].dropna().astype(str).str.strip()
+)
 
 for COMMUNITY in COMMUNITIES:
-
-    EXPERIMENT_TYPES = ("baseline", "sparql", "agent")
+    missing_types = missing_experiment_types(COMMUNITY)
+    if not missing_types:
+        print(f"Skipping {COMMUNITY}: dataset folders already exist.")
+        continue
 
     INPUT_TTL = PROJECT_ROOT / "enhanced_xr.ttl"
 
@@ -73,7 +87,7 @@ for COMMUNITY in COMMUNITIES:
             detached_g.add(triple)
             modified_g.remove(triple)
 
-    for EXPERIMENT_TYPE in EXPERIMENT_TYPES:
+    for EXPERIMENT_TYPE in missing_types:
         DETACHED_OUTPUT_TTL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "detached.ttl"
         MODIFIED_ORIGINAL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "modified_original.ttl"
         COMMUNITY_SUMMARY = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "summary.txt"
