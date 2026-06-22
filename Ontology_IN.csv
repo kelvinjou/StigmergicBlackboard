@@ -7,3 +7,16 @@ CaveAutomaticVirtualEnvironment,done
 MagneticTracker,done
 Ergonomics,done
 SoftwareToolkit,done
+TrackingSystem,done
+InputDevice,done
+OutputDevice,done
+PerceptualFactor,done
+CognitiveFactor,done
+SelectionTechnique,done
+ManipulationTechnique,done
+TravelTechnique,done
+SystemControlTechnique,done
+UIComponent,untested
+EvaluationMethod,untested
+DesignPrinciple,untested
+ApplicationDomain,untested

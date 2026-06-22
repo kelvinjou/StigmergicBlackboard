@@ -25,7 +25,7 @@ from PrunedReconstruction.insertions.bl_insert import BaselineInsert
 from PrunedReconstruction.insertions.sparql_insert import SparQLInsert
 from PrunedReconstruction.verif_metrics import validate_ttl
 
-EXPERIMENT_TYPES = ("agent", "agent_no_traversal", "baseline", "sparql")
+EXPERIMENT_TYPES = ("agent", "baseline", "sparql") #  "agent_no_traversal"
 # EXPERIMENT_TYPES = ("agent",)
 
 BENCHMARK_COLUMNS = [
@@ -150,6 +150,26 @@ def write_raw_output(paths, output):
     paths["raw_output"].write_text(str(output), encoding="utf-8")
 
 
+def is_rate_limit_error(exc):
+    """Return True when an exception or one of its causes represents HTTP 429."""
+    current = exc
+    seen = set()
+
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        response = getattr(current, "response", None)
+        status_code = getattr(current, "status_code", None)
+        if status_code is None and response is not None:
+            status_code = getattr(response, "status_code", None)
+
+        if status_code == 429 or type(current).__name__ == "RateLimitError":
+            return True
+
+        current = current.__cause__ or current.__context__
+
+    return False
+
+
 def run_baseline(paths, model):
     ensure_dataset_inputs(paths)
     shutil.copy2(paths["modified_ttl"], paths["output_ttl"])
@@ -160,7 +180,7 @@ def run_baseline(paths, model):
         model=model,
     )
     raw_output = baseline.send_messages(
-        "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
+        "Generate the missing classes using the required output shape exactly."
     )
     write_raw_output(paths, raw_output)
     additions = extract_md_content(raw_output)
@@ -191,11 +211,7 @@ def run_sparql(paths, model):
         model=model,
     )
     raw_output = sparql_insert.send_messages(
-        """
-        ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY
-        PROVIDED IN THE FINAL ANSWER.
-        Output plain SPARQL only. Do not wrap it in markdown fences.
-        """
+        "Generate the SPARQL insertion using the required output shape exactly."
     )
     write_raw_output(paths, raw_output)
     sparql_output = normalize_sparql_batch(raw_output)
@@ -282,6 +298,8 @@ def run_one_benchmark(
         else:
             raise ValueError(f"Unsupported experiment type: {experiment_type}")
     except Exception as exc:
+        if is_rate_limit_error(exc):
+            raise
         error = f"{type(exc).__name__}: {exc}"
         print(error)
         traceback.print_exc()
@@ -312,16 +330,24 @@ def run_one_benchmark(
     }
 
 
-def append_results(csv_path, rows):
+def append_result(csv_path, row):
     csv_path = Path(csv_path)
-    new_df = pd.DataFrame(rows, columns=BENCHMARK_COLUMNS)
-    if csv_path.exists():
-        existing_df = pd.read_csv(csv_path)
-        merged_df = pd.concat([existing_df, new_df], ignore_index=True)
-    else:
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
-        merged_df = new_df
-    merged_df.to_csv(csv_path, index=False)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+    pd.DataFrame([row], columns=BENCHMARK_COLUMNS).to_csv(
+        csv_path,
+        mode="a",
+        header=write_header,
+        index=False,
+    )
+    return csv_path
+
+
+def append_results(csv_path, rows):
+    """Compatibility wrapper that persists each supplied row independently."""
+    csv_path = Path(csv_path)
+    for row in rows:
+        append_result(csv_path, row)
     return csv_path
 
 
@@ -443,7 +469,7 @@ def main():
     if not communities:
         raise SystemExit("Pass --community <name> or --all-communities.")
 
-    rows = []
+    rows_written = 0
     for community in communities:
         for trial_number in range(1, args.trials_per_community + 1):
             if args.run_id and args.trials_per_community == 1:
@@ -458,8 +484,8 @@ def main():
                     f"Running {experiment_type} benchmark for {community} "
                     f"(trial {trial_number}/{args.trials_per_community})"
                 )
-                rows.append(
-                    run_one_benchmark(
+                try:
+                    row = run_one_benchmark(
                         dataset_root=args.dataset_root,
                         experiment_type=experiment_type,
                         community=community,
@@ -468,14 +494,23 @@ def main():
                         run_id=run_id,
                         preserve_trial_output=args.trials_per_community > 1,
                     )
-                )
+                except Exception as exc:
+                    if not is_rate_limit_error(exc):
+                        raise
+                    raise SystemExit(
+                        "OpenAI API returned HTTP 429. Terminating benchmark "
+                        "without recording the current experiment run."
+                    ) from exc
+
+                append_result(args.csv, row)
+                rows_written += 1
+                print(f"Appended benchmark row to {args.csv}")
         mark_community_done(community)
 
         # print("entering NVIDIA NIM downtime...")
         # time.sleep(60)
 
-    csv_path = append_results(args.csv, rows)
-    print(f"Wrote {len(rows)} benchmark row(s) to {csv_path}")
+    print(f"Wrote {rows_written} benchmark row(s) incrementally to {args.csv}")
 
 
 if __name__ == "__main__":

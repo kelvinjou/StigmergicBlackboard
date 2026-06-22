@@ -12,18 +12,8 @@ from LLMCompletionWrappers import client as llm_client
 
 DEFAULT_MODEL = LLM_MODEL
 
-# Similar to BaselineInsert, but instead of having OpenAI generate .ttl file, it will
-# generate SPARQL operations (insert/delete/update)to reduce write overhead
-# the SPARQL would then get parsed into the Graph using RDFLib
 class SparQLInsert:
     def __init__(self, modified_ttl_path, summary_file_path, model=DEFAULT_MODEL):
-        # load in the graph, and then insert elems using SparQL commands
-        
-        # might be better to just write out SPARQL commands than actual ttl source file. 
-        # will convert it over anyways
-
-        # give it a Graph or the raw source file?
-        # give it the raw source file, input would be the same, but output would be less?
         load_dotenv()
         self.client = llm_client
         self.model = model
@@ -37,11 +27,24 @@ class SparQLInsert:
             {
                 "role": "system",
                 "content": (
-                    "Root class name: 'Concept'\n\n"
+                    "Reconstruct the missing ontology classes described by the summary.\n\n"
                     "Current ontology TTL:\n"
                     f"{self.modified_ttl_path}\n\n"
-                    "Create additional components to the ontology, based on the description"
+                    "Summary:\n"
                     f"{self.summary}\n\n"
+                    "Required output shape:\n"
+                    "PREFIX : <ontology-default-namespace>\n"
+                    "PREFIX owl: <http://www.w3.org/2002/07/owl#>\n"
+                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                    "INSERT DATA {\n"
+                    "  :ClassName a owl:Class ;\n"
+                    "      rdfs:label \"Class label\"@en ;\n"
+                    "      rdfs:comment \"Class description\"@en ;\n"
+                    "      rdfs:subClassOf :ParentClassName .\n"
+                    "}\n\n"
+                    "Use the actual default namespace from the ontology and include "
+                    "all missing class triples inside one INSERT DATA block. Return "
+                    "only the SPARQL update. Do not include markdown fences or prose."
                 )
             }
         )
@@ -66,12 +69,6 @@ if __name__ == "__main__":
         modified_ttl_path=SRC_TTL,
         summary_file_path=SUMMARY
     )
-    message = """
-        ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY
-        PROVIDED IN THE FINAL ANSWER.
-        Output shape: ```sparql [OPERATION]```
-        """
+    message = "Generate the SPARQL insertion using the required output shape exactly."
     response = llm.send_messages(message)
     print(response)
-
-    # will also need a function that verifies SPARQL operation calls if they're valid or not

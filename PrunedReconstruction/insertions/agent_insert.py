@@ -265,25 +265,6 @@ class AgentInsertionTools:
             "count": len(properties),
         }
 
-    def recurse_n_layers(self, root_class: str, depth: int = 3):
-        target_uri = self._resolve_ttl_identifier(root_class)
-        visited = set()
-        frontier = {target_uri}
-
-        for _ in range(int(depth)):
-            next_frontier = set()
-            for parent_uri in frontier:
-                for subclass_uri in self.g.subjects(RDFS.subClassOf, parent_uri):
-                    if subclass_uri in visited:
-                        continue
-                    visited.add(subclass_uri)
-                    next_frontier.add(subclass_uri)
-            frontier = next_frontier
-            if not frontier:
-                break
-
-        return [self._local_name(uri) for uri in sorted(visited, key=str)]
-
     def insert_class_batch(self, classes):
         """
         Add one or more owl:Class nodes to the current TTL file.
@@ -442,41 +423,33 @@ class AgentInsert:
                 f"""
                 You are an ontology reconstruction insertion agent.
 
-                Root class name: Concept
+                Reconstruct the missing ontology classes described in the summary.
+                Traversal is unavailable in this experiment.
 
-                You are given a textual summary of an ontology community that was
-                pruned from a TTL ontology. Reconstruct the missing classes using
-                only the summary and the insertion tool. Ontology traversal and
-                inspection tools are unavailable in this experiment.
-
-                Summary of pruned community:
+                Summary:
                 {self.summary}
 
-                Available tool:
-                - insert_class_batch(classes): inserts missing owl:Class nodes.
-                  Input must be JSON: {{"classes": [{{"class_name": "...",
-                  "parent_class_name": "...", "label": "...", "comment": "...",
-                  "relations": [{{"predicate": "coveredInChapter",
-                  "object": "Ch8"}}]}}]}}.
+                Tool:
+                - insert_class_batch(classes)
 
-                Insertion rules:
-                - Infer the best parent classes from the summary alone.
-                - Insert the pruned root class before its children by placing the
-                  entire missing community in one insert_class_batch call.
-                - Prefer exact class names and descriptions from the summary.
-                - Never request or attempt to use traversal or inspection tools.
-                - After insert_class_batch succeeds, stop and provide a Final
-                  Answer summarizing inserted class names and paths.
-                - Never output Turtle syntax.
+                Insert the missing classes in one batch. Use the class names,
+                hierarchy, labels, and descriptions supported by the summary.
+                Do not output Turtle or markdown.
 
-                Tool call format:
-                Thought: concise reason for the insertion
+                Every response must match exactly one of these shapes.
+
+                Tool call:
+                Thought: concise reason
                 Action: insert_class_batch
-                Action Input: JSON object containing the classes
+                Action Input: {{"classes": [{{"class_name": "...",
+                  "parent_class_name": "...", "label": "...",
+                  "comment": "..."}}]}}
                 PAUSE
 
-                Final response format:
-                Final Answer: concise result
+                Completion:
+                Final Answer: inserted=<count>; classes=[ClassName, ...]
+
+                Do not add text before or after the selected shape.
                 """
             ).strip()
 
@@ -484,59 +457,52 @@ class AgentInsert:
             f"""
             You are an ontology reconstruction insertion agent.
 
-            Root class name: Concept
+            Reconstruct the missing ontology classes described in the summary.
+            Use the traversal tools to find the existing parent for the missing
+            community, then insert the community in one batch.
 
-            You are given a textual summary of an ontology community that was
-            pruned from a TTL ontology. Your task is to reconstruct the missing
-            classes by traversing the existing ontology from the root using tools,
-            choosing the correct existing parent class, and inserting only the
-            missing community classes.
-
-            Do not ask for or rely on the full TTL ontology in the prompt. The
-            only ontology facts you may use are facts returned in Observations.
-            The summary is evidence for what missing classes should be inserted,
-            but the insertion parent must be grounded by traversal observations.
-
-            Summary of pruned community:
+            Summary:
             {self.summary}
 
-            Available tools:
+            Tools:
             - query_subclass(parent_class_name): returns direct subclass names.
-            - inspect_class(target_class_name): returns labels, comments, parents,
-              and properties for one class.
-            - recurse_n_layers(root_class, depth): returns descendant names within
-              a bounded depth.
-            - insert_class_batch(classes): inserts missing owl:Class nodes. Input
-              must be JSON: {{"classes": [{{"class_name": "...",
-              "parent_class_name": "...", "label": "...", "comment": "...",
-              "relations": [{{"predicate": "coveredInChapter", "object": "Ch8"}}]}}]}}.
+            - inspect_class(target_class_name): returns basic class details.
+            - insert_class_batch(classes): inserts missing classes.
 
-            Insertion rules:
-            - Start by traversing from Concept.
-            - Insert the pruned root class under the best existing parent before
-              inserting its children under that pruned root class.
-            - Prefer exact class names and descriptions from the summary.
-            - Include useful existing object relations from the summary only when
-              their target already appears to be part of the ontology, such as Ch8
-              or WayfindingTask.
+            Start traversal at Concept. Use the summary for the missing class
+            names, hierarchy, labels, and descriptions. Once the existing parent
+            is identified, insert all missing classes in one batch.
+
+            Rules:
             - Use one tool call per assistant response.
-            - Minimize tool calls. Prefer stepwise query_subclass traversal over
-              broad recurse_n_layers calls; if using recurse_n_layers, use depth
-              2 or less unless strictly necessary.
-            - Once you have identified the missing root class parent, insert the
-              whole missing community in one insert_class_batch call.
-            - After insert_class_batch succeeds, stop and provide a Final Answer
-              summarizing inserted class names and paths.
-            - Never output Turtle syntax.
+            - Do not output Turtle or markdown.
 
-            Tool call format:
-            Thought: concise reason for next lookup
-            Action: one of query_subclass, inspect_class, recurse_n_layers, insert_class_batch
-            Action Input: local class name, or JSON object for tools with multiple arguments
+            Every response must match exactly one of these shapes.
+
+            Direct-subclass lookup:
+            Thought: concise reason
+            Action: query_subclass
+            Action Input: {{"parent_class_name": "ClassName"}}
             PAUSE
 
-            Final response format:
-            Final Answer: concise result
+            Class inspection:
+            Thought: concise reason
+            Action: inspect_class
+            Action Input: {{"target_class_name": "ClassName"}}
+            PAUSE
+
+            Insertion:
+            Thought: concise reason
+            Action: insert_class_batch
+            Action Input: {{"classes": [{{"class_name": "...",
+              "parent_class_name": "...", "label": "...",
+              "comment": "..."}}]}}
+            PAUSE
+
+            Completion:
+            Final Answer: inserted=<count>; classes=[ClassName, ...]
+
+            Do not add text before or after the selected shape.
             """
         ).strip()
 
@@ -570,21 +536,20 @@ class AgentInsert:
         if self.allow_traversal:
             next_message = (
                 "Reconstruct and insert the missing ontology community described in "
-                "the summary. Traverse from Concept first. Return only a Final Answer "
-                "after insertion succeeds."
+                "the summary. Traverse from Concept first and follow one of the "
+                "required response shapes exactly."
             )
             known_tools = {
                 "query_subclass": self.tools.query_subclass,
                 "inspect_class": self.tools.inspect_class,
-                "recurse_n_layers": self.tools.recurse_n_layers,
                 "insert_class_batch": self.tools.insert_class_batch,
             }
         else:
             next_message = (
                 "Reconstruct and insert the missing ontology community described "
                 "in the summary using insert_class_batch. No traversal or "
-                "inspection tools are available. Return only a Final Answer after "
-                "insertion succeeds."
+                "inspection tools are available. Follow one of the required "
+                "response shapes exactly."
             )
             known_tools = {
                 "insert_class_batch": self.tools.insert_class_batch,
@@ -623,13 +588,14 @@ class AgentInsert:
             if self.allow_traversal:
                 next_message = (
                     "Continue from the compact traversal state. If the parent is "
-                    "grounded, insert the missing community in one batch."
+                    "grounded, insert the missing community in one batch. Follow "
+                    "one of the required response shapes exactly."
                 )
             else:
                 next_message = (
                     "Continue using only insert_class_batch. Correct any insertion "
                     "error using the summary and insert the missing community in "
-                    "one batch."
+                    "one batch. Follow one of the required response shapes exactly."
                 )
 
         return None

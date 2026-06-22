@@ -14,4 +14,4 @@ LLM_MODEL = "qwen/qwen3.6-35b-a3b"
 
 # Benchmark run configuration.
 INPUT_CSV = PROJECT_ROOT / "Ontology_IN.csv"
-TRIALS_PER_COMMUNITY = 3
+TRIALS_PER_COMMUNITY = 1

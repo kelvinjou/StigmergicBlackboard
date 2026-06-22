@@ -5,7 +5,7 @@ from typing import Optional
 
 from rdflib import Graph
 from rdflib.compare import isomorphic
-
+from rdflib.namespace import RDFS
 
 
 class TTLDiffAnalysis:
@@ -24,8 +24,16 @@ class TTLDiffAnalysis:
         ground_truth.parse(ground_truth_path, format="ttl")
         reinserted.parse(reinserted_path, format="ttl")
 
-        ground_truth_triples = set(ground_truth)
-        reinserted_triples = set(reinserted)
+        # ignore the comments, they don't have to be exact during comparison
+        ground_truth_triples = {
+            triple for triple in ground_truth
+            if triple[1] != RDFS.comment
+        }
+        reinserted_triples = {
+            triple for triple in reinserted
+            if triple[1] != RDFS.comment
+        }
+
         base_triples = set()
 
         if base_path:

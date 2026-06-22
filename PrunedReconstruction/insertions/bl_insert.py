@@ -27,11 +27,19 @@ class BaselineInsert:
             {
                 "role": "system",
                 "content": (
-                    "Root class name: 'Concept'\n\n"
+                    "Reconstruct the missing ontology classes described by the summary.\n\n"
                     "Current ontology TTL:\n"
                     f"{self.modified_ttl_path}\n\n"
-                    "Create additional components to the ontology, based on the description"
+                    "Summary:\n"
                     f"{self.summary}\n\n"
+                    "Required output shape:\n"
+                    ":ClassName a owl:Class ;\n"
+                    "    rdfs:label \"Class label\"@en ;\n"
+                    "    rdfs:comment \"Class description\"@en ;\n"
+                    "    rdfs:subClassOf :ParentClassName .\n\n"
+                    "Repeat that block for each missing class. Return only those "
+                    "Turtle blocks. Do not include prefixes, markdown fences, prose, "
+                    "or the existing ontology."
                 )
             }
         )
@@ -58,6 +66,6 @@ if __name__ == "__main__":
         modified_ttl_path=SRC_TTL,
         summary_file_path=SUMMARY
     )
-    message = "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
+    message = "Generate the missing classes using the required output shape exactly."
     response = llm.send_messages(message)
     print(response)

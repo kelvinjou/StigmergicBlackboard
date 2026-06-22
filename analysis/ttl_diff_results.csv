@@ -1,129 +1,52 @@
 run_id,community_pruned,model,experiment_type,ground_truth_triples,base_triples,reinserted_triples,shared_triples,missing_triples,extra_triples,triple_precision,triple_recall,triple_f1,exact_graph_match,error
-b85bfb8aae7842238924e91210c6b911,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/WayfindingTechnique/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent_no_traversal/WayfindingTechnique/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/WayfindingTechnique/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/WayfindingTechnique/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Task,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/Task/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Task,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent_no_traversal/Task/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Task,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/Task/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Task,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/Task/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/DisplayDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,DisplayDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent_no_traversal/DisplayDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/DisplayDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/DisplayDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/PassiveInputDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-b85bfb8aae7842238924e91210c6b911,PassiveInputDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/PassiveInputDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,PassiveInputDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/PassiveInputDevice/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/CaveAutomaticVirtualEnvironment/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-b85bfb8aae7842238924e91210c6b911,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/CaveAutomaticVirtualEnvironment/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/CaveAutomaticVirtualEnvironment/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,MagneticTracker,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/MagneticTracker/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,MagneticTracker,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-b85bfb8aae7842238924e91210c6b911,MagneticTracker,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/MagneticTracker/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,MagneticTracker,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/MagneticTracker/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Ergonomics,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/Ergonomics/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Ergonomics,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-b85bfb8aae7842238924e91210c6b911,Ergonomics,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/Ergonomics/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,Ergonomics,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/Ergonomics/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/agent/SoftwareToolkit/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-b85bfb8aae7842238924e91210c6b911,SoftwareToolkit,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/baseline/SoftwareToolkit/reinserted.ttl'
-b85bfb8aae7842238924e91210c6b911,SoftwareToolkit,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,FileNotFoundError: [Errno 2] No such file or directory: '/Users/kelvinjou/Documents/GitHub/OntologyAgent/dataset/sparql/SoftwareToolkit/reinserted.ttl'
-931755741e8943b2b8a21e3e522d9751,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,41,682,28,22,19,6,0.7857142857142857,0.5365853658536586,0.6376811594202899,False,
-931755741e8943b2b8a21e3e522d9751,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent_no_traversal,41,682,30,24,17,6,0.8,0.5853658536585366,0.676056338028169,False,
-931755741e8943b2b8a21e3e522d9751,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,41,682,43,34,7,9,0.7906976744186046,0.8292682926829268,0.8095238095238095,False,
-931755741e8943b2b8a21e3e522d9751,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,41,682,46,28,13,18,0.6086956521739131,0.6829268292682927,0.6436781609195402,False,
-463c33cd4a6b4f03a95fcfe84b51ca11,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,41,682,28,22,19,6,0.7857142857142857,0.5365853658536586,0.6376811594202899,False,
-463c33cd4a6b4f03a95fcfe84b51ca11,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent_no_traversal,41,682,31,22,19,9,0.7096774193548387,0.5365853658536586,0.6111111111111112,False,
-463c33cd4a6b4f03a95fcfe84b51ca11,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,41,682,43,34,7,9,0.7906976744186046,0.8292682926829268,0.8095238095238095,False,
-463c33cd4a6b4f03a95fcfe84b51ca11,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,41,682,38,24,17,14,0.631578947368421,0.5853658536585366,0.6075949367088608,False,
-0217f489d2764ec19dfe08a643393cf9,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-0217f489d2764ec19dfe08a643393cf9,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-0217f489d2764ec19dfe08a643393cf9,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-0217f489d2764ec19dfe08a643393cf9,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-e094ff58365448918e793b251823c199,Task,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-e094ff58365448918e793b251823c199,Task,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-e094ff58365448918e793b251823c199,Task,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-e094ff58365448918e793b251823c199,Task,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-dace768932fb4e1a92cfca960e47aa99,Task,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-dace768932fb4e1a92cfca960e47aa99,Task,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-dace768932fb4e1a92cfca960e47aa99,Task,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-dace768932fb4e1a92cfca960e47aa99,Task,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-da44182946ed4a4db7b7df0e328dde5b,Task,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-da44182946ed4a4db7b7df0e328dde5b,Task,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-da44182946ed4a4db7b7df0e328dde5b,Task,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-da44182946ed4a4db7b7df0e328dde5b,Task,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-75a3f22a0eb44a37b46e722f49296e24,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-75a3f22a0eb44a37b46e722f49296e24,DisplayDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-75a3f22a0eb44a37b46e722f49296e24,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-75a3f22a0eb44a37b46e722f49296e24,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-231b63623cc14899afbe6157050a15c8,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-231b63623cc14899afbe6157050a15c8,DisplayDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-231b63623cc14899afbe6157050a15c8,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-231b63623cc14899afbe6157050a15c8,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-981dd9c29e1a4ac78203ad006e2c78d3,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-981dd9c29e1a4ac78203ad006e2c78d3,DisplayDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-981dd9c29e1a4ac78203ad006e2c78d3,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-981dd9c29e1a4ac78203ad006e2c78d3,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-599a03c2f23740a685d6cb54fe22dd57,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-599a03c2f23740a685d6cb54fe22dd57,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-599a03c2f23740a685d6cb54fe22dd57,PassiveInputDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-599a03c2f23740a685d6cb54fe22dd57,PassiveInputDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-f749b153f96048efacfce5f3af7fa1e7,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-f749b153f96048efacfce5f3af7fa1e7,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-f749b153f96048efacfce5f3af7fa1e7,PassiveInputDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-f749b153f96048efacfce5f3af7fa1e7,PassiveInputDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-8881c086bb4b43788aabfd7da68f2fe9,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-8881c086bb4b43788aabfd7da68f2fe9,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-8881c086bb4b43788aabfd7da68f2fe9,PassiveInputDevice,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-8881c086bb4b43788aabfd7da68f2fe9,PassiveInputDevice,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-3690b64afaf942fea4e344e09fe72442,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-3690b64afaf942fea4e344e09fe72442,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-3690b64afaf942fea4e344e09fe72442,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-3690b64afaf942fea4e344e09fe72442,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-7f0b548c0dfa4675bdb51754d5e51bf6,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-7f0b548c0dfa4675bdb51754d5e51bf6,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-7f0b548c0dfa4675bdb51754d5e51bf6,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-7f0b548c0dfa4675bdb51754d5e51bf6,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-6ba009642893423a9b393d07a60a13c1,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-6ba009642893423a9b393d07a60a13c1,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-6ba009642893423a9b393d07a60a13c1,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-6ba009642893423a9b393d07a60a13c1,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-402bf2f517f140f3bb8078b4dd70bdc4,MagneticTracker,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-402bf2f517f140f3bb8078b4dd70bdc4,MagneticTracker,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-402bf2f517f140f3bb8078b4dd70bdc4,MagneticTracker,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-402bf2f517f140f3bb8078b4dd70bdc4,MagneticTracker,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-07cdc1f1cc5045eeb82b2106d79e048f,MagneticTracker,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-07cdc1f1cc5045eeb82b2106d79e048f,MagneticTracker,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-07cdc1f1cc5045eeb82b2106d79e048f,MagneticTracker,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-07cdc1f1cc5045eeb82b2106d79e048f,MagneticTracker,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-1ebf180f161e4b11b32dfb32b2a60b6f,MagneticTracker,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-1ebf180f161e4b11b32dfb32b2a60b6f,MagneticTracker,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-1ebf180f161e4b11b32dfb32b2a60b6f,MagneticTracker,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-1ebf180f161e4b11b32dfb32b2a60b6f,MagneticTracker,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-6e0c15b431ff4ea1bfc27a0f0bd31271,Ergonomics,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-6e0c15b431ff4ea1bfc27a0f0bd31271,Ergonomics,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-6e0c15b431ff4ea1bfc27a0f0bd31271,Ergonomics,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-6e0c15b431ff4ea1bfc27a0f0bd31271,Ergonomics,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-4878d66e21bf460484c90ae389d6d363,Ergonomics,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-4878d66e21bf460484c90ae389d6d363,Ergonomics,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-4878d66e21bf460484c90ae389d6d363,Ergonomics,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-4878d66e21bf460484c90ae389d6d363,Ergonomics,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-2598b0b4d5d540298b54af7afa0d0614,Ergonomics,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-2598b0b4d5d540298b54af7afa0d0614,Ergonomics,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-2598b0b4d5d540298b54af7afa0d0614,Ergonomics,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-2598b0b4d5d540298b54af7afa0d0614,Ergonomics,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-9c8bec33cf58477a9e1853fbdf0ac22f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-9c8bec33cf58477a9e1853fbdf0ac22f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-9c8bec33cf58477a9e1853fbdf0ac22f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-9c8bec33cf58477a9e1853fbdf0ac22f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-71a3ad3a80ba415fa21c36dbe9449fdf,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-71a3ad3a80ba415fa21c36dbe9449fdf,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-71a3ad3a80ba415fa21c36dbe9449fdf,SoftwareToolkit,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-71a3ad3a80ba415fa21c36dbe9449fdf,SoftwareToolkit,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
-06cbedc2d5af42e7aa30604674d675c4,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent,,,,,,,,,,,APITimeoutError: Request timed out.
-06cbedc2d5af42e7aa30604674d675c4,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent_no_traversal,,,,,,,,,,,APITimeoutError: Request timed out.
-06cbedc2d5af42e7aa30604674d675c4,SoftwareToolkit,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,APITimeoutError: Request timed out.
-06cbedc2d5af42e7aa30604674d675c4,SoftwareToolkit,qwen/qwen3.6-35b-a3b,sparql,,,,,,,,,,,APITimeoutError: Request timed out.
+0be004dc45e44961a5309c62a43abad8,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,34,682,21,21,13,0,1.0,0.6176470588235294,0.7636363636363637,False,
+0be004dc45e44961a5309c62a43abad8,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,34,682,21,21,13,0,1.0,0.6176470588235294,0.7636363636363637,False,
+0be004dc45e44961a5309c62a43abad8,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,34,682,29,28,6,1,0.9655172413793104,0.8235294117647058,0.888888888888889,False,
+3d52853c04f04be8bddc6ddfaf6bf361,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,29,689,18,15,14,3,0.8333333333333334,0.5172413793103449,0.6382978723404256,False,
+3d52853c04f04be8bddc6ddfaf6bf361,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,29,689,18,15,14,3,0.8333333333333334,0.5172413793103449,0.6382978723404256,False,
+3d52853c04f04be8bddc6ddfaf6bf361,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,29,689,18,17,12,1,0.9444444444444444,0.5862068965517241,0.7234042553191489,False,
+27f268afbfa84e7cbe6a58b8edcc2ae1,Task,qwen/qwen3.6-35b-a3b,agent,65,657,21,21,44,0,1.0,0.3230769230769231,0.48837209302325585,False,
+27f268afbfa84e7cbe6a58b8edcc2ae1,Task,qwen/qwen3.6-35b-a3b,baseline,65,657,21,21,44,0,1.0,0.3230769230769231,0.48837209302325585,False,
+27f268afbfa84e7cbe6a58b8edcc2ae1,Task,qwen/qwen3.6-35b-a3b,sparql,65,657,27,21,44,6,0.7777777777777778,0.3230769230769231,0.45652173913043476,False,
+73b9c5fbf247461db344e29905bfedb2,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent,3,719,18,3,0,15,0.16666666666666666,1.0,0.2857142857142857,False,
+73b9c5fbf247461db344e29905bfedb2,PassiveInputDevice,qwen/qwen3.6-35b-a3b,baseline,3,719,3,3,0,0,1.0,1.0,1.0,True,
+73b9c5fbf247461db344e29905bfedb2,PassiveInputDevice,qwen/qwen3.6-35b-a3b,sparql,3,719,18,3,0,15,0.16666666666666666,1.0,0.2857142857142857,False,
+bd67905d1be645218c64b3ee35a7f9c0,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent,4,718,3,2,2,1,0.6666666666666666,0.5,0.5714285714285715,False,
+bd67905d1be645218c64b3ee35a7f9c0,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,baseline,4,718,4,3,1,1,0.75,0.75,0.75,False,
+bd67905d1be645218c64b3ee35a7f9c0,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,sparql,4,718,4,3,1,1,0.75,0.75,0.75,False,
+59ba0a659e7b44a8be67cf4fd988f99f,MagneticTracker,qwen/qwen3.6-35b-a3b,agent,4,718,3,3,1,0,1.0,0.75,0.8571428571428571,False,
+59ba0a659e7b44a8be67cf4fd988f99f,MagneticTracker,qwen/qwen3.6-35b-a3b,baseline,4,718,4,4,0,0,1.0,1.0,1.0,True,
+be71dcfffb3245999c24040338c498f2,MagneticTracker,qwen/qwen3.6-35b-a3b,sparql,4,718,4,4,0,0,1.0,1.0,1.0,True,
+daf11e7d867c4f2f80465cddbf64e083,Ergonomics,qwen/qwen3.6-35b-a3b,agent,6,716,3,3,3,0,1.0,0.5,0.6666666666666666,False,
+daf11e7d867c4f2f80465cddbf64e083,Ergonomics,qwen/qwen3.6-35b-a3b,baseline,6,716,4,4,2,0,1.0,0.6666666666666666,0.8,False,
+daf11e7d867c4f2f80465cddbf64e083,Ergonomics,qwen/qwen3.6-35b-a3b,sparql,6,716,4,4,2,0,1.0,0.6666666666666666,0.8,False,
+4511b660ff004b3e98fdb045c9ad993f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent,4,718,15,3,1,12,0.2,0.75,0.31578947368421056,False,
+4511b660ff004b3e98fdb045c9ad993f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,baseline,4,718,3,3,1,0,1.0,0.75,0.8571428571428571,False,
+4511b660ff004b3e98fdb045c9ad993f,SoftwareToolkit,qwen/qwen3.6-35b-a3b,sparql,4,718,4,4,0,0,1.0,1.0,1.0,True,
+0be777e2b8644c1ca910fc1f7b0fff69,TrackingSystem,qwen/qwen3.6-35b-a3b,agent,28,689,21,21,7,0,1.0,0.75,0.8571428571428571,False,
+0be777e2b8644c1ca910fc1f7b0fff69,TrackingSystem,qwen/qwen3.6-35b-a3b,baseline,28,689,22,22,6,0,1.0,0.7857142857142857,0.88,False,
+0be777e2b8644c1ca910fc1f7b0fff69,TrackingSystem,qwen/qwen3.6-35b-a3b,sparql,28,689,28,28,0,0,1.0,1.0,1.0,True,
+ba462ea1d80c492d9a17003426dd2389,InputDevice,qwen/qwen3.6-35b-a3b,agent,13,707,12,12,1,0,1.0,0.9230769230769231,0.9600000000000001,False,
+82eb5e54e7304edc93ab74b635836d2c,InputDevice,qwen/qwen3.6-35b-a3b,baseline,13,707,12,12,1,0,1.0,0.9230769230769231,0.9600000000000001,False,
+82eb5e54e7304edc93ab74b635836d2c,InputDevice,qwen/qwen3.6-35b-a3b,sparql,13,707,16,13,0,3,0.8125,1.0,0.896551724137931,False,
+faf391329464433d8c58a67411deb9b0,OutputDevice,qwen/qwen3.6-35b-a3b,agent,11,710,9,9,2,0,1.0,0.8181818181818182,0.9,False,
+faf391329464433d8c58a67411deb9b0,OutputDevice,qwen/qwen3.6-35b-a3b,baseline,11,710,9,9,2,0,1.0,0.8181818181818182,0.9,False,
+faf391329464433d8c58a67411deb9b0,OutputDevice,qwen/qwen3.6-35b-a3b,sparql,11,710,9,9,2,0,1.0,0.8181818181818182,0.9,False,
+5478c2b8a0e24f75bf8499245ee0304e,PerceptualFactor,qwen/qwen3.6-35b-a3b,agent,50,671,39,38,12,1,0.9743589743589743,0.76,0.853932584269663,False,
+5478c2b8a0e24f75bf8499245ee0304e,PerceptualFactor,qwen/qwen3.6-35b-a3b,baseline,50,671,39,39,11,0,1.0,0.78,0.8764044943820225,False,
+5478c2b8a0e24f75bf8499245ee0304e,PerceptualFactor,qwen/qwen3.6-35b-a3b,sparql,50,671,40,40,10,0,1.0,0.8,0.888888888888889,False,
+04a42b4da2e449e39cc94d6512a2ca3a,CognitiveFactor,qwen/qwen3.6-35b-a3b,agent,21,702,15,15,6,0,1.0,0.7142857142857143,0.8333333333333333,False,
+04a42b4da2e449e39cc94d6512a2ca3a,CognitiveFactor,qwen/qwen3.6-35b-a3b,baseline,21,702,15,15,6,0,1.0,0.7142857142857143,0.8333333333333333,False,
+04a42b4da2e449e39cc94d6512a2ca3a,CognitiveFactor,qwen/qwen3.6-35b-a3b,sparql,21,702,15,15,6,0,1.0,0.7142857142857143,0.8333333333333333,False,
+fb95acd4ad3640ecb695f4c4f176ca38,SelectionTechnique,qwen/qwen3.6-35b-a3b,agent,47,667,0,0,47,0,0,0.0,0,False,
+fb95acd4ad3640ecb695f4c4f176ca38,SelectionTechnique,qwen/qwen3.6-35b-a3b,baseline,47,667,27,25,22,2,0.9259259259259259,0.5319148936170213,0.6756756756756757,False,
+fb95acd4ad3640ecb695f4c4f176ca38,SelectionTechnique,qwen/qwen3.6-35b-a3b,sparql,47,667,45,43,4,2,0.9555555555555556,0.9148936170212766,0.9347826086956522,False,
+9c3b1934ba4247798b429e7197b72e7f,ManipulationTechnique,qwen/qwen3.6-35b-a3b,agent,40,675,24,17,23,7,0.7083333333333334,0.425,0.53125,False,
+9c3b1934ba4247798b429e7197b72e7f,ManipulationTechnique,qwen/qwen3.6-35b-a3b,baseline,40,675,24,22,18,2,0.9166666666666666,0.55,0.6874999999999999,False,
+9c3b1934ba4247798b429e7197b72e7f,ManipulationTechnique,qwen/qwen3.6-35b-a3b,sparql,40,675,41,38,2,3,0.926829268292683,0.95,0.9382716049382716,False,
+53d2c5fc41754a6dabfe37f8e5c30df8,TravelTechnique,qwen/qwen3.6-35b-a3b,agent,46,669,24,19,27,5,0.7916666666666666,0.41304347826086957,0.5428571428571429,False,
+53d2c5fc41754a6dabfe37f8e5c30df8,TravelTechnique,qwen/qwen3.6-35b-a3b,baseline,46,669,24,23,23,1,0.9583333333333334,0.5,0.6571428571428571,False,
+53d2c5fc41754a6dabfe37f8e5c30df8,TravelTechnique,qwen/qwen3.6-35b-a3b,sparql,46,669,47,45,1,2,0.9574468085106383,0.9782608695652174,0.967741935483871,False,
+30dc61a90ca44e0c89ff4077af703b16,SystemControlTechnique,qwen/qwen3.6-35b-a3b,agent,34,683,18,18,16,0,1.0,0.5294117647058824,0.6923076923076924,False,
+30dc61a90ca44e0c89ff4077af703b16,SystemControlTechnique,qwen/qwen3.6-35b-a3b,baseline,34,683,18,18,16,0,1.0,0.5294117647058824,0.6923076923076924,False,
+30dc61a90ca44e0c89ff4077af703b16,SystemControlTechnique,qwen/qwen3.6-35b-a3b,sparql,34,683,28,28,6,0,1.0,0.8235294117647058,0.9032258064516129,False,

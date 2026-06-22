@@ -89,11 +89,7 @@ def run_sparql_insert(
         model=model,
     )
     raw_output = sparql_insert.send_messages(
-        """
-        ONLY OUTPUT SPARQL OPERATIONS YOU GENERATE BASED ON DESCRIPTIVE SUMMARY
-        PROVIDED IN THE FINAL ANSWER.
-        Output plain SPARQL only. Do not wrap it in markdown fences.
-        """
+        "Generate the SPARQL insertion using the required output shape exactly."
     )
     sparql_output = extract_md_content(raw_output)
     sparql_query_valid = is_valid_sparql_update(sparql_output)

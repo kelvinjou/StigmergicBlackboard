@@ -73,7 +73,7 @@ def run_baseline_insert(
         model=model,
     )
     output = baseline_insert.send_messages(
-        "ONLY OUTPUT THE ADDITIONAL TTL SYNTAX YOU GENERATE BASED ON DESCRIPTIVE SUMMARY PROVIDED IN THE FINAL ANSWER."
+        "Generate the missing classes using the required output shape exactly."
     )
 
     additions = extract_md_content(output)
