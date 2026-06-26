@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config import LLM_MODEL
 from LLMCompletionWrappers import client as llm_client
+from PrunedReconstruction.insertions.reconstruction_contract import EVIDENCE_RULES
 
 DEFAULT_MODEL = LLM_MODEL
 
@@ -155,6 +156,25 @@ class AgentInsertionTools:
         return value
 
     def _resolve_ttl_identifier(self, identifier: str) -> URIRef:
+        identifier = str(identifier).strip()
+        if identifier.startswith("<") and identifier.endswith(">"):
+            return URIRef(identifier[1:-1])
+
+        prefixes = {
+            "rdf": RDF,
+            "rdfs": RDFS,
+            "owl": OWL,
+            **{
+                str(prefix): namespace
+                for prefix, namespace in self.g.namespaces()
+                if prefix
+            },
+        }
+        if ":" in identifier and not identifier.startswith(":"):
+            prefix, local_name = identifier.split(":", 1)
+            if prefix in prefixes:
+                return URIRef(str(prefixes[prefix]) + local_name)
+
         identifier = self._normalize_local_name(identifier)
 
         for _, namespace in self.g.namespaces():
@@ -169,6 +189,35 @@ class AgentInsertionTools:
                 return uri
 
         return URIRef(str(self.default_namespace) + identifier)
+
+    def _format_assertion_object(self, assertion):
+        object_type = str(assertion.get("object_type") or "uri").lower()
+        value = assertion["object"]
+
+        if object_type == "uri":
+            return self._resolve_ttl_identifier(value)
+        if object_type != "literal":
+            raise ValueError(
+                "assertion object_type must be either 'uri' or 'literal'."
+            )
+
+        language = assertion.get("language")
+        datatype = assertion.get("datatype")
+        if language and datatype:
+            raise ValueError(
+                "A literal assertion cannot specify both language and datatype."
+            )
+        if datatype:
+            return Literal(
+                str(value),
+                datatype=self._resolve_ttl_identifier(datatype),
+            )
+        return Literal(str(value), lang=language or None)
+
+    def _format_turtle_term(self, term):
+        if isinstance(term, URIRef):
+            return self._compact_uri(term)
+        return term.n3(self.g.namespace_manager)
 
     def _format_value(self, value):
         if isinstance(value, URIRef):
@@ -262,23 +311,54 @@ class AgentInsertionTools:
                 for item in properties
                 if item["predicate"] == str(RDFS.subClassOf) and "name" in item["object"]
             ],
+            "outgoing_assertions": [
+                {
+                    "subject": self._local_name(target_uri),
+                    "predicate": self._local_name(predicate),
+                    "object": self._format_value(obj),
+                }
+                for predicate, obj in self.g.predicate_objects(target_uri)
+                if predicate
+                not in {RDF.type, RDFS.label, RDFS.comment, RDFS.subClassOf}
+            ],
+            "incoming_assertions": [
+                {
+                    "subject": self._local_name(subject),
+                    "predicate": self._local_name(predicate),
+                    "object": self._local_name(target_uri),
+                }
+                for subject, predicate in self.g.subject_predicates(target_uri)
+                if isinstance(subject, URIRef)
+            ],
             "count": len(properties),
         }
 
-    def insert_class_batch(self, classes):
+    def insert_class_batch(self, classes, assertions=None):
         """
-        Add one or more owl:Class nodes to the current TTL file.
+        Add owl:Class nodes and arbitrary RDF assertions to the current TTL file.
 
         Args:
             classes: list of objects with class_name, parent_class_name, label,
                 comment, and optional relations. Each relation is an object with
                 predicate and object local names, for example:
                 {"predicate": "coveredInChapter", "object": "Ch8"}.
+            assertions: optional list of arbitrary triples. Each object has
+                subject, predicate, object, object_type ("uri" or "literal"),
+                and optional language or datatype fields.
         """
         if isinstance(classes, dict):
-            classes = classes.get("classes", [])
-        if not isinstance(classes, list) or not classes:
-            raise ValueError("insert_class_batch expects a non-empty classes list.")
+            payload = classes
+            classes = payload.get("classes", [])
+            assertions = payload.get("assertions", assertions)
+        assertions = assertions or []
+        if not isinstance(classes, list) or not isinstance(assertions, list):
+            raise ValueError(
+                "insert_class_batch expects classes and assertions lists."
+            )
+        if not classes and not assertions:
+            raise ValueError(
+                "insert_class_batch expects at least one class or assertion."
+            )
 
         normalized = []
         for item in classes:
@@ -355,7 +435,34 @@ class AgentInsertionTools:
                 }
             )
 
-        if ttl_entries:
+        inserted_assertions = []
+        assertion_lines = []
+        for assertion in assertions:
+            if not isinstance(assertion, dict):
+                raise ValueError("Each assertion must be a JSON object.")
+            subject = self._resolve_ttl_identifier(assertion["subject"])
+            predicate = self._resolve_ttl_identifier(assertion["predicate"])
+            obj = self._format_assertion_object(assertion)
+            triple = (subject, predicate, obj)
+            if triple in self.g:
+                continue
+
+            self.g.add(triple)
+            assertion_lines.append(
+                f"{self._format_turtle_term(subject)} "
+                f"{self._format_turtle_term(predicate)} "
+                f"{self._format_turtle_term(obj)} ."
+            )
+            inserted_assertions.append(
+                {
+                    "subject": str(subject),
+                    "predicate": str(predicate),
+                    "object": str(obj),
+                }
+            )
+
+        generated_blocks = ttl_entries + assertion_lines
+        if generated_blocks:
             generated_at = datetime.now(timezone.utc).isoformat()
             generated_by = self.generated_by or "unknown"
             self._append_ttl_block(
@@ -365,7 +472,7 @@ class AgentInsertionTools:
                 f"# Generated at: {generated_at}\n"
                 f"# Generated by: {generated_by}\n"
                 "############################################\n\n"
-                + "\n\n".join(ttl_entries)
+                + "\n\n".join(generated_blocks)
                 + "\n"
             )
             self._verify_ttl_file()
@@ -376,6 +483,8 @@ class AgentInsertionTools:
             "skipped": skipped,
             "inserted_count": len(inserted),
             "skipped_count": len(skipped),
+            "inserted_assertions": inserted_assertions,
+            "inserted_assertion_count": len(inserted_assertions),
         }
 
 
@@ -423,18 +532,21 @@ class AgentInsert:
                 f"""
                 You are an ontology reconstruction insertion agent.
 
-                Reconstruct the missing ontology classes described in the summary.
+                Reconstruct the missing ontology RDF subgraph described in the summary.
                 Traversal is unavailable in this experiment.
 
                 Summary:
                 {self.summary}
 
-                Tool:
-                - insert_class_batch(classes)
+                {EVIDENCE_RULES}
 
-                Insert the missing classes in one batch. Use the class names,
-                hierarchy, labels, and descriptions supported by the summary.
-                Do not output Turtle or markdown.
+                Tool:
+                - insert_class_batch(classes, assertions)
+
+                Insert the missing classes and explicitly supported assertions in
+                one batch. Assertions may point from a reconstructed resource to
+                a retained resource or from a retained resource to a reconstructed
+                resource. Do not output Turtle or markdown.
 
                 Every response must match exactly one of these shapes.
 
@@ -443,11 +555,15 @@ class AgentInsert:
                 Action: insert_class_batch
                 Action Input: {{"classes": [{{"class_name": "...",
                   "parent_class_name": "...", "label": "...",
-                  "comment": "..."}}]}}
+                  "comment": "...", "relations": [{{"predicate": "...",
+                  "object": "..."}}]}}], "assertions": [
+                  {{"subject": "...", "predicate": "...", "object": "...",
+                  "object_type": "uri"}}]}}
                 PAUSE
 
                 Completion:
-                Final Answer: inserted=<count>; classes=[ClassName, ...]
+                Final Answer: inserted_classes=<count>;
+                inserted_assertions=<count>; classes=[ClassName, ...]
 
                 Do not add text before or after the selected shape.
                 """
@@ -457,21 +573,28 @@ class AgentInsert:
             f"""
             You are an ontology reconstruction insertion agent.
 
-            Reconstruct the missing ontology classes described in the summary.
+            Reconstruct the missing ontology RDF subgraph described in the summary.
             Use the traversal tools to find the existing parent for the missing
-            community, then insert the community in one batch.
+            community and inspect analogous retained resources, then insert the
+            community and its explicitly supported assertions in one batch.
 
             Summary:
             {self.summary}
 
+            {EVIDENCE_RULES}
+
             Tools:
             - query_subclass(parent_class_name): returns direct subclass names.
-            - inspect_class(target_class_name): returns basic class details.
-            - insert_class_batch(classes): inserts missing classes.
+            - inspect_class(target_class_name): returns class details plus outgoing
+              and incoming non-hierarchical assertions.
+            - insert_class_batch(classes, assertions): inserts missing classes and
+              arbitrary outgoing or incoming assertions.
 
             Start traversal at Concept. Use the summary for the missing class
-            names, hierarchy, labels, and descriptions. Once the existing parent
-            is identified, insert all missing classes in one batch.
+            names, hierarchy, labels, descriptions, and exact asserted relations.
+            Inspect retained sibling or analogous resources when useful for
+            identifying ontology predicates. Once grounded, insert the missing
+            subgraph in one batch.
 
             Rules:
             - Use one tool call per assistant response.
@@ -496,11 +619,15 @@ class AgentInsert:
             Action: insert_class_batch
             Action Input: {{"classes": [{{"class_name": "...",
               "parent_class_name": "...", "label": "...",
-              "comment": "..."}}]}}
+              "comment": "...", "relations": [{{"predicate": "...",
+              "object": "..."}}]}}], "assertions": [
+              {{"subject": "...", "predicate": "...", "object": "...",
+              "object_type": "uri"}}]}}
             PAUSE
 
             Completion:
-            Final Answer: inserted=<count>; classes=[ClassName, ...]
+            Final Answer: inserted_classes=<count>;
+            inserted_assertions=<count>; classes=[ClassName, ...]
 
             Do not add text before or after the selected shape.
             """
@@ -535,7 +662,7 @@ class AgentInsert:
     def run(self, max_turns=12, verbose=True):
         if self.allow_traversal:
             next_message = (
-                "Reconstruct and insert the missing ontology community described in "
+                "Reconstruct and insert the missing ontology subgraph described in "
                 "the summary. Traverse from Concept first and follow one of the "
                 "required response shapes exactly."
             )
@@ -546,7 +673,7 @@ class AgentInsert:
             }
         else:
             next_message = (
-                "Reconstruct and insert the missing ontology community described "
+                "Reconstruct and insert the missing ontology subgraph described "
                 "in the summary using insert_class_batch. No traversal or "
                 "inspection tools are available. Follow one of the required "
                 "response shapes exactly."
@@ -588,14 +715,16 @@ class AgentInsert:
             if self.allow_traversal:
                 next_message = (
                     "Continue from the compact traversal state. If the parent is "
-                    "grounded, insert the missing community in one batch. Follow "
-                    "one of the required response shapes exactly."
+                    "grounded, insert the missing community and all explicitly "
+                    "supported assertions in one batch. Follow one of the required "
+                    "response shapes exactly."
                 )
             else:
                 next_message = (
                     "Continue using only insert_class_batch. Correct any insertion "
-                    "error using the summary and insert the missing community in "
-                    "one batch. Follow one of the required response shapes exactly."
+                    "error using the summary and insert the missing subgraph, "
+                    "including explicitly supported assertions, in one batch. "
+                    "Follow one of the required response shapes exactly."
                 )
 
         return None

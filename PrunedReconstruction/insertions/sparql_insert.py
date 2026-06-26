@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config import LLM_MODEL
 from LLMCompletionWrappers import client as llm_client
+from PrunedReconstruction.insertions.reconstruction_contract import EVIDENCE_RULES
 
 DEFAULT_MODEL = LLM_MODEL
 
@@ -17,8 +18,8 @@ class SparQLInsert:
         load_dotenv()
         self.client = llm_client
         self.model = model
-        self.modified_ttl_path = open(modified_ttl_path, "r").read()
-        self.summary = open(summary_file_path, "r").read()
+        self.modified_ttl_path = Path(modified_ttl_path).read_text(encoding="utf-8")
+        self.summary = Path(summary_file_path).read_text(encoding="utf-8")
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
@@ -27,24 +28,31 @@ class SparQLInsert:
             {
                 "role": "system",
                 "content": (
-                    "Reconstruct the missing ontology classes described by the summary.\n\n"
+                    "Reconstruct the missing ontology RDF subgraph described by the summary.\n\n"
                     "Current ontology TTL:\n"
                     f"{self.modified_ttl_path}\n\n"
                     "Summary:\n"
                     f"{self.summary}\n\n"
+                    f"{EVIDENCE_RULES}\n\n"
                     "Required output shape:\n"
                     "PREFIX : <ontology-default-namespace>\n"
+                    "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
                     "PREFIX owl: <http://www.w3.org/2002/07/owl#>\n"
                     "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
                     "INSERT DATA {\n"
                     "  :ClassName a owl:Class ;\n"
                     "      rdfs:label \"Class label\"@en ;\n"
                     "      rdfs:comment \"Class description\"@en ;\n"
-                    "      rdfs:subClassOf :ParentClassName .\n"
+                    "      rdfs:subClassOf :ParentClassName ;\n"
+                    "      :coveredInChapter :Ch4 ;\n"
+                    "      :supportsTask :TaskName .\n"
+                    "  :ExistingResource :somePredicate :ClassName .\n"
                     "}\n\n"
-                    "Use the actual default namespace from the ontology and include "
-                    "all missing class triples inside one INSERT DATA block. Return "
-                    "only the SPARQL update. Do not include markdown fences or prose."
+                    "The example predicates are illustrative. Use the actual default "
+                    "namespace and include every missing triple explicitly supported "
+                    "by the summary inside one INSERT DATA block, including incoming "
+                    "or outgoing non-hierarchical assertions. Return only the SPARQL "
+                    "update. Do not include markdown fences or prose."
                 )
             }
         )
@@ -69,6 +77,6 @@ if __name__ == "__main__":
         modified_ttl_path=SRC_TTL,
         summary_file_path=SUMMARY
     )
-    message = "Generate the SPARQL insertion using the required output shape exactly."
+    message = "Generate the SPARQL update for the missing RDF subgraph using the required output shape exactly."
     response = llm.send_messages(message)
     print(response)

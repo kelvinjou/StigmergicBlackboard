@@ -89,7 +89,7 @@ def run_sparql_insert(
         model=model,
     )
     raw_output = sparql_insert.send_messages(
-        "Generate the SPARQL insertion using the required output shape exactly."
+        "Generate the SPARQL update for the missing RDF subgraph using the required output shape exactly."
     )
     sparql_output = extract_md_content(raw_output)
     sparql_query_valid = is_valid_sparql_update(sparql_output)

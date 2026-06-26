@@ -73,7 +73,7 @@ def run_baseline_insert(
         model=model,
     )
     output = baseline_insert.send_messages(
-        "Generate the missing classes using the required output shape exactly."
+        "Generate the missing RDF subgraph using the required output shape exactly."
     )
 
     additions = extract_md_content(output)

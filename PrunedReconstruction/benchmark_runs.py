@@ -180,7 +180,7 @@ def run_baseline(paths, model):
         model=model,
     )
     raw_output = baseline.send_messages(
-        "Generate the missing classes using the required output shape exactly."
+        "Generate the missing RDF subgraph using the required output shape exactly."
     )
     write_raw_output(paths, raw_output)
     additions = extract_md_content(raw_output)
@@ -211,7 +211,7 @@ def run_sparql(paths, model):
         model=model,
     )
     raw_output = sparql_insert.send_messages(
-        "Generate the SPARQL insertion using the required output shape exactly."
+        "Generate the SPARQL update for the missing RDF subgraph using the required output shape exactly."
     )
     write_raw_output(paths, raw_output)
     sparql_output = normalize_sparql_batch(raw_output)

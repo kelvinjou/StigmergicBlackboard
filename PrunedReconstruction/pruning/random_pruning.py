@@ -24,7 +24,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from PrunedReconstruction.pruning.baseline_summarization import BaselineSummarization
+from PrunedReconstruction.pruning.baseline_summarization import (
+    BaselineSummarization,
+    build_explicit_assertion_inventory,
+)
 from agent import agent_query
 
 
@@ -43,13 +46,6 @@ for COMMUNITY in COMMUNITIES:
     g.parse(INPUT_TTL, format="turtle")
 
     root_class = EX[COMMUNITY]
-
-    # In-context TTL (baseline) generate description without agent drilling through the layers. 
-    # just give it the entire TTL in the context window
-    summary = BaselineSummarization()
-    baseline_summarization_response = summary.send_messages(f"Generate a thorough description about {COMMUNITY}, and its relations with other communities in the ontology especially communities that are a subclass of it.")
-    print(baseline_summarization_response)
-
 
     # step down into descendants transitively
     branch_classes = set(g.transitive_subjects(RDFS.subClassOf, root_class))
@@ -73,6 +69,23 @@ for COMMUNITY in COMMUNITIES:
             detached_g.add(triple)
             modified_g.remove(triple)
 
+    # Generate shared reconstruction evidence for every experiment type.
+    # The prose preserves the human-readable task, while the exact assertion
+    # inventory prevents non-hierarchical edges from being silently omitted.
+    summary = BaselineSummarization()
+    baseline_summarization_response = summary.send_messages(
+        f"Generate a thorough description about {COMMUNITY}, its subclasses, "
+        "and its exact asserted relations with other communities. Clearly "
+        "separate asserted relationships from conceptual implications."
+    )
+    summary_text = (
+        str(baseline_summarization_response).strip()
+        + "\n\n"
+        + build_explicit_assertion_inventory(detached_g)
+        + "\n"
+    )
+    print(summary_text)
+
     for EXPERIMENT_TYPE in EXPERIMENT_TYPES:
         DETACHED_OUTPUT_TTL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "detached.ttl"
         MODIFIED_ORIGINAL = PROJECT_ROOT / "dataset" / EXPERIMENT_TYPE / COMMUNITY / "modified_original.ttl"
@@ -88,4 +101,4 @@ for COMMUNITY in COMMUNITIES:
         print("Modified Original")
 
         with open(COMMUNITY_SUMMARY, "w") as f:
-            f.write(str(baseline_summarization_response))
+            f.write(summary_text)

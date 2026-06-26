@@ -46,3 +46,19 @@ Breadcrumbs ──► Discrete waypoints ──► Efficient origin-destination 
 - **Supports tasks**: `WayfindingTask` (explicitly stated via `:supportsTask`)
 - **Avoids human factor**: Reduces `CognitiveLoad` by externalizing route memory
 - **Design principle application**: `SupportSpatialUnderstanding`
+
+## Explicit RDF assertions to reconstruct
+The following are asserted triples from the source ontology, not conceptual or inferred relationships:
+- :ArchitecturalSubdivisions :coveredInChapter :Ch8 .
+- :ArchitecturalSubdivisions :supportsTask :WayfindingTask .
+- :Breadcrumbs :coveredInChapter :Ch8 .
+- :Breadcrumbs :supportsTask :WayfindingTask .
+- :Compass :coveredInChapter :Ch8 .
+- :Compass :supportsTask :WayfindingTask .
+- :Signage :coveredInChapter :Ch8 .
+- :Signage :supportsTask :WayfindingTask .
+- :TrailCues :coveredInChapter :Ch8 .
+- :TrailCues :supportsTask :WayfindingTask .
+- :VirtualMap :coveredInChapter :Ch8 .
+- :VirtualMap :supportsTask :WayfindingTask .
+- :WayfindingTechnique :coveredInChapter :Ch8 .
