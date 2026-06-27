@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from rdflib import OWL, RDF, RDFS
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -10,41 +9,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config import LLM_MODEL
 from LLMCompletionWrappers import client as llm_client
-
-
-STRUCTURAL_SUMMARY_PREDICATES = {
-    RDFS.label,
-    RDFS.comment,
-    RDFS.subClassOf,
-}
-
-
-def build_explicit_assertion_inventory(graph):
-    """Return exact non-hierarchical triples for inclusion in summaries."""
-    assertions = [
-        triple
-        for triple in graph
-        if triple[1] not in STRUCTURAL_SUMMARY_PREDICATES
-        and not (triple[1] == RDF.type and triple[2] == OWL.Class)
-    ]
-    lines = [
-        "## Explicit RDF assertions to reconstruct",
-        (
-            "The following are asserted triples from the source ontology, not "
-            "conceptual or inferred relationships:"
-        ),
-    ]
-    for subject, predicate, obj in sorted(
-        assertions, key=lambda triple: tuple(map(str, triple))
-    ):
-        lines.append(
-            f"- {subject.n3(graph.namespace_manager)} "
-            f"{predicate.n3(graph.namespace_manager)} "
-            f"{obj.n3(graph.namespace_manager)} ."
-        )
-    if not assertions:
-        lines.append("- None.")
-    return "\n".join(lines)
 
 
 class BaselineSummarization:
@@ -56,20 +20,28 @@ class BaselineSummarization:
         load_dotenv()
         self.client = llm_client
         self.model = model
-        self.raw_ttl = Path(ttl_path).read_text()
+        self.raw_ttl = Path(ttl_path).read_text(encoding="utf-8")
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
         self.messages = []
-        self.max_tokens = 3000
+        self.max_tokens = 1200
         self.messages.append(
             {
                 "role": "system",
                 "content": (
-                    "Root class name: 'Concept'. Summarize only relationships "
-                    "asserted in the supplied ontology. Clearly distinguish exact "
-                    "assertions from conceptual implications or possible future "
-                    "relationships.\n\n"
+                    "Root class name: 'Concept'. Generate a prose-only summary "
+                    "of the requested ontology community.\n\n"
+                    "Do not output Turtle, SPARQL, JSON, CSV, tables, or "
+                    "subject-predicate-object lists. Do not enumerate exact "
+                    "connector triples. Do not provide a structured inventory of "
+                    "relationships to reconstruct.\n\n"
+                    "You may describe relationship themes at a high level, such "
+                    "as the community's parent category, likely task area, chapter "
+                    "context, evaluation context, or human-factor context, but "
+                    "avoid saying that every named class has a specific exact "
+                    "predicate/object pair. Distinguish conceptual relevance from "
+                    "explicit ontology assertions when useful.\n\n"
                     + self.raw_ttl
                 )
             }
@@ -94,8 +66,8 @@ class BaselineSummarization:
 if __name__ == "__main__":
     agent = BaselineSummarization()
     message = (
-        "Generate a thorough description about Wayfinding Technique, its "
-        "subclasses, and its exact asserted relations with other communities."
+        "Generate a prose summary about Wayfinding Technique, its subclasses, "
+        "and its broad role in the ontology. Do not list exact connector triples."
     )
     response = agent.send_messages(message)
     print(response)

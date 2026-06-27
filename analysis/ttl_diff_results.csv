@@ -1,25 +1,14 @@
 run_id,community_pruned,model,experiment_type,ground_truth_triples,base_triples,reinserted_triples,shared_triples,missing_triples,extra_triples,triple_precision,triple_recall,triple_f1,exact_graph_match,error
-2f9a792425304fe9ac0857817f0780a2,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,34,682,34,31,3,3,0.9117647058823529,0.9117647058823529,0.9117647058823528,False,
-2f9a792425304fe9ac0857817f0780a2,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,34,682,34,34,0,0,1.0,1.0,1.0,True,
-2f9a792425304fe9ac0857817f0780a2,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,34,682,34,34,0,0,1.0,1.0,1.0,True,
-7d71f6e4fcb94c1fbf2f62293a2864b9,Task,qwen/qwen3.6-35b-a3b,agent,65,657,65,59,6,6,0.9076923076923077,0.9076923076923077,0.9076923076923076,False,
-7d71f6e4fcb94c1fbf2f62293a2864b9,Task,qwen/qwen3.6-35b-a3b,baseline,65,657,65,65,0,0,1.0,1.0,1.0,True,
-7d71f6e4fcb94c1fbf2f62293a2864b9,Task,qwen/qwen3.6-35b-a3b,sparql,65,657,71,65,0,6,0.9154929577464789,1.0,0.9558823529411764,False,
-c01423162e8145ccb58e82be13c56602,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,29,689,34,15,14,19,0.4411764705882353,0.5172413793103449,0.47619047619047616,False,
-c01423162e8145ccb58e82be13c56602,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,29,689,34,13,16,21,0.38235294117647056,0.4482758620689655,0.41269841269841273,False,
-c01423162e8145ccb58e82be13c56602,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,29,689,35,17,12,18,0.4857142857142857,0.5862068965517241,0.53125,False,
-f6c0ee0f9e654453ba71d5826ae677b8,PassiveInputDevice,qwen/qwen3.6-35b-a3b,agent,3,719,4,3,0,1,0.75,1.0,0.8571428571428571,False,
-f6c0ee0f9e654453ba71d5826ae677b8,PassiveInputDevice,qwen/qwen3.6-35b-a3b,baseline,3,719,4,3,0,1,0.75,1.0,0.8571428571428571,False,
-f6c0ee0f9e654453ba71d5826ae677b8,PassiveInputDevice,qwen/qwen3.6-35b-a3b,sparql,3,719,4,3,0,1,0.75,1.0,0.8571428571428571,False,
-fee5275773c3403a8b5055a2f697c8f7,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,agent,4,718,4,3,1,1,0.75,0.75,0.75,False,
-fee5275773c3403a8b5055a2f697c8f7,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,baseline,4,718,4,3,1,1,0.75,0.75,0.75,False,
-fee5275773c3403a8b5055a2f697c8f7,CaveAutomaticVirtualEnvironment,qwen/qwen3.6-35b-a3b,sparql,4,718,4,3,1,1,0.75,0.75,0.75,False,
-13215e784e914118a1bc5b984926f66c,MagneticTracker,qwen/qwen3.6-35b-a3b,agent,4,718,4,3,1,1,0.75,0.75,0.75,False,
-13215e784e914118a1bc5b984926f66c,MagneticTracker,qwen/qwen3.6-35b-a3b,baseline,4,718,4,4,0,0,1.0,1.0,1.0,True,
-13215e784e914118a1bc5b984926f66c,MagneticTracker,qwen/qwen3.6-35b-a3b,sparql,4,718,4,4,0,0,1.0,1.0,1.0,True,
-f7600f2c1c9f4260a2c5b098d5b657ad,Ergonomics,qwen/qwen3.6-35b-a3b,agent,6,716,6,6,0,0,1.0,1.0,1.0,True,
-f7600f2c1c9f4260a2c5b098d5b657ad,Ergonomics,qwen/qwen3.6-35b-a3b,baseline,6,716,6,6,0,0,1.0,1.0,1.0,True,
-f7600f2c1c9f4260a2c5b098d5b657ad,Ergonomics,qwen/qwen3.6-35b-a3b,sparql,6,716,6,6,0,0,1.0,1.0,1.0,True,
-a9650443f922452cace7423a500f4655,SoftwareToolkit,qwen/qwen3.6-35b-a3b,agent,4,718,4,4,0,0,1.0,1.0,1.0,True,
-a9650443f922452cace7423a500f4655,SoftwareToolkit,qwen/qwen3.6-35b-a3b,baseline,4,718,4,4,0,0,1.0,1.0,1.0,True,
-a9650443f922452cace7423a500f4655,SoftwareToolkit,qwen/qwen3.6-35b-a3b,sparql,4,718,4,4,0,0,1.0,1.0,1.0,True,
+b114f211228a46a0a66d76c11fe143f2,WayfindingTechnique,qwen/qwen3.6-35b-a3b,agent,34,682,3,0,34,3,0.0,0.0,0,False,
+b114f211228a46a0a66d76c11fe143f2,WayfindingTechnique,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,"BadSyntax: at line 832 of <>:
+Bad syntax (']' expected) at ^ in:
+""...b'###############\n# BASELINE GENERATION (PURE LLM) OUTPUT\n####'^b'###################################\n\n[Empty output due to mi'..."""
+b114f211228a46a0a66d76c11fe143f2,WayfindingTechnique,qwen/qwen3.6-35b-a3b,sparql,34,682,0,0,34,0,0,0.0,0,False,
+2fb7fe21bc064af3a0dba8e81465954b,Task,qwen/qwen3.6-35b-a3b,agent,65,657,0,0,65,0,0,0.0,0,False,
+2fb7fe21bc064af3a0dba8e81465954b,Task,qwen/qwen3.6-35b-a3b,baseline,,,,,,,,,,,"BadSyntax: at line 807 of <>:
+Bad syntax (expected item in list or ')') at ^ in:
+""...b'#################\n# BASELINE GENERATION (PURE LLM) OUTPUT\n##'^b'#####################################\n\n(no output)\n'"""
+2fb7fe21bc064af3a0dba8e81465954b,Task,qwen/qwen3.6-35b-a3b,sparql,65,657,0,0,65,0,0,0.0,0,False,
+ada430e1bd6745718a4c0c2f2a4f2eb5,DisplayDevice,qwen/qwen3.6-35b-a3b,agent,29,689,0,0,29,0,0,0.0,0,False,
+ada430e1bd6745718a4c0c2f2a4f2eb5,DisplayDevice,qwen/qwen3.6-35b-a3b,baseline,29,689,6,0,29,6,0.0,0.0,0,False,
+ada430e1bd6745718a4c0c2f2a4f2eb5,DisplayDevice,qwen/qwen3.6-35b-a3b,sparql,29,689,0,0,29,0,0,0.0,0,False,

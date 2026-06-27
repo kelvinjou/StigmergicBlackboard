@@ -82,6 +82,19 @@ def _compact_observation(result):
             if len(value) > 40:
                 compact["children_truncated"] = len(value) - 40
             continue
+        if key in {
+            "matches",
+            "examples",
+            "outgoing_assertions",
+            "incoming_assertions",
+            "predicate_usage",
+            "common_objects",
+            "subject_parent_patterns",
+        } and isinstance(value, list):
+            compact[key] = value[:30]
+            if len(value) > 30:
+                compact[f"{key}_truncated"] = len(value) - 30
+            continue
         if key == "inserted" and isinstance(value, list):
             compact[key] = [
                 {
@@ -119,6 +132,7 @@ class AgentInsertionTools:
         self.g.parse(self.ttl_path, format="ttl")
         self.default_namespace = self._default_namespace()
         self.ontology = Namespace(str(self.default_namespace))
+        self._resource_index = None
 
     def _default_namespace(self):
         default_namespace = dict(self.g.namespaces()).get("")
@@ -233,6 +247,68 @@ class AgentInsertionTools:
             }
         return {"value": str(value)}
 
+    def _edge_record(self, subject, predicate, obj):
+        record = {
+            "subject": self._local_name(subject)
+            if isinstance(subject, URIRef)
+            else str(subject),
+            "predicate": self._local_name(predicate)
+            if isinstance(predicate, URIRef)
+            else str(predicate),
+        }
+        if isinstance(obj, URIRef):
+            record["object"] = self._local_name(obj)
+            record["object_type"] = "uri"
+        elif isinstance(obj, Literal):
+            record["object"] = str(obj)
+            record["object_type"] = "literal"
+            if obj.language:
+                record["language"] = obj.language
+            if obj.datatype:
+                record["datatype"] = self._local_name(obj.datatype)
+        else:
+            record["object"] = str(obj)
+            record["object_type"] = type(obj).__name__
+        return record
+
+    def _build_resource_index(self):
+        if self._resource_index is not None:
+            return self._resource_index
+
+        resources = {
+            term
+            for triple in self.g
+            for term in (triple[0], triple[2])
+            if isinstance(term, URIRef)
+        }
+        index = []
+        for resource in resources:
+            labels = [
+                str(label)
+                for label in self.g.objects(resource, RDFS.label)
+                if isinstance(label, Literal)
+            ]
+            comments = [
+                str(comment)
+                for comment in self.g.objects(resource, RDFS.comment)
+                if isinstance(comment, Literal)
+            ]
+            index.append(
+                {
+                    "uri": resource,
+                    "name": self._local_name(resource),
+                    "labels": labels,
+                    "comments": comments,
+                    "search_text": " ".join(
+                        [self._local_name(resource), *labels, *comments]
+                    ).lower(),
+                }
+            )
+        self._resource_index = sorted(
+            index, key=lambda item: item["name"].lower()
+        )
+        return self._resource_index
+
     def _class_path(self, target_uri: URIRef):
         parent_lookup = {
             child: parent
@@ -276,61 +352,211 @@ class AgentInsertionTools:
         }
 
     def inspect_class(self, target_class_name: str):
-        target_uri = self._resolve_ttl_identifier(target_class_name)
+        return self.inspect_resource(target_class_name)
+
+    def find_resources(self, query: str, limit: int = 12):
+        """
+        Search retained ontology resources by local name, label, or comment.
+
+        Use this to find analogous siblings or target resources mentioned in a
+        prose summary without reading the whole TTL.
+        """
+        query_terms = [
+            term.lower()
+            for term in re.findall(r"[A-Za-z0-9_-]+", str(query))
+            if term
+        ]
+        if not query_terms:
+            raise ValueError("find_resources requires a non-empty query.")
+
+        matches = []
+        for item in self._build_resource_index():
+            score = sum(term in item["search_text"] for term in query_terms)
+            if not score:
+                continue
+            matches.append(
+                {
+                    "name": item["name"],
+                    "label": item["labels"][:2],
+                    "comment": item["comments"][:1],
+                    "score": score,
+                }
+            )
+
+        matches = sorted(
+            matches,
+            key=lambda item: (-item["score"], item["name"].lower()),
+        )[: int(limit)]
+        return {
+            "query": query,
+            "matches": matches,
+            "count": len(matches),
+        }
+
+    def inspect_resource(
+        self,
+        target_name: str,
+        include_incoming: bool = True,
+        include_literals: bool = False,
+        predicate_filter: str = None,
+        limit: int = 40,
+    ):
+        """
+        Inspect arbitrary outgoing and incoming predicates for one resource.
+
+        Args:
+            target_name: local name, prefixed name, or URI.
+            include_incoming: include retained-resource -> target edges.
+            include_literals: include non-label/comment literal assertions.
+            predicate_filter: optional predicate local name, prefixed name, or URI.
+            limit: max outgoing and max incoming assertion records.
+        """
+        target_uri = self._resolve_ttl_identifier(target_name)
         if (target_uri, None, None) not in self.g and (None, None, target_uri) not in self.g:
             return {
-                "target_class_name": target_class_name,
+                "target_name": target_name,
                 "found": False,
                 "count": 0,
             }
 
-        properties = [
-            {
-                "predicate": str(predicate),
-                "predicate_name": self._local_name(predicate),
-                "object": self._format_value(obj),
-            }
-            for predicate, obj in self.g.predicate_objects(target_uri)
+        predicate_uri = (
+            self._resolve_ttl_identifier(predicate_filter)
+            if predicate_filter
+            else None
+        )
+        structural_predicates = {
+            RDF.type,
+            RDFS.label,
+            RDFS.comment,
+            RDFS.subClassOf,
+        }
+        labels = [
+            str(value)
+            for value in self.g.objects(target_uri, RDFS.label)
+            if isinstance(value, Literal)
+        ]
+        comments = [
+            str(value)
+            for value in self.g.objects(target_uri, RDFS.comment)
+            if isinstance(value, Literal)
+        ]
+        subclass_of = [
+            self._local_name(parent)
+            for parent in self.g.objects(target_uri, RDFS.subClassOf)
+            if isinstance(parent, URIRef)
         ]
 
+        outgoing = []
+        predicate_counts = {}
+        for predicate, obj in self.g.predicate_objects(target_uri):
+            predicate_counts[self._local_name(predicate)] = (
+                predicate_counts.get(self._local_name(predicate), 0) + 1
+            )
+            if predicate in structural_predicates:
+                continue
+            if predicate_uri is not None and predicate != predicate_uri:
+                continue
+            if isinstance(obj, Literal) and not include_literals:
+                continue
+            outgoing.append(self._edge_record(target_uri, predicate, obj))
+
+        incoming = []
+        if include_incoming:
+            for subject, predicate in self.g.subject_predicates(target_uri):
+                if predicate_uri is not None and predicate != predicate_uri:
+                    continue
+                incoming.append(self._edge_record(subject, predicate, target_uri))
+
+        outgoing = sorted(
+            outgoing,
+            key=lambda edge: (
+                edge["predicate"],
+                edge.get("object", ""),
+                edge.get("subject", ""),
+            ),
+        )
+        incoming = sorted(
+            incoming,
+            key=lambda edge: (
+                edge["predicate"],
+                edge.get("subject", ""),
+                edge.get("object", ""),
+            ),
+        )
+
         return {
-            "target_class_name": self._local_name(target_uri),
+            "target_name": self._local_name(target_uri),
             "found": True,
-            "label": [
-                item["object"]["value"]
-                for item in properties
-                if item["predicate"] == str(RDFS.label)
+            "label": labels[:3],
+            "comment": comments[:1],
+            "subclass_of": subclass_of,
+            "predicate_usage": [
+                {"predicate": predicate, "count": count}
+                for predicate, count in sorted(predicate_counts.items())
             ],
-            "comment": [
-                item["object"]["value"]
-                for item in properties
-                if item["predicate"] == str(RDFS.comment)
+            "outgoing_assertions": outgoing[: int(limit)],
+            "incoming_assertions": incoming[: int(limit)],
+            "outgoing_count": len(outgoing),
+            "incoming_count": len(incoming),
+        }
+
+    def inspect_predicate_usage(self, predicate_name: str, limit: int = 40):
+        """
+        Show compact examples for an arbitrary predicate in the retained ontology.
+
+        Use this to discover cross-community relationship patterns such as
+        supportsTask, coveredInChapter, evaluatedBy, addressesHumanFactor, or
+        owl:disjointWith without loading the full TTL into the scratchpad.
+        """
+        predicate_uri = self._resolve_ttl_identifier(predicate_name)
+        triples = [
+            self._edge_record(subject, predicate_uri, obj)
+            for subject, obj in self.g.subject_objects(predicate_uri)
+            if isinstance(subject, URIRef)
+        ]
+        triples = sorted(
+            triples,
+            key=lambda edge: (
+                edge.get("subject", ""),
+                edge.get("object", ""),
+            ),
+        )
+
+        object_counts = {}
+        subject_parent_counts = {}
+        for subject, obj in self.g.subject_objects(predicate_uri):
+            if isinstance(obj, URIRef):
+                object_name = self._local_name(obj)
+                object_counts[object_name] = object_counts.get(object_name, 0) + 1
+            if isinstance(subject, URIRef):
+                parents = [
+                    self._local_name(parent)
+                    for parent in self.g.objects(subject, RDFS.subClassOf)
+                    if isinstance(parent, URIRef)
+                ]
+                for parent_name in parents:
+                    subject_parent_counts[parent_name] = (
+                        subject_parent_counts.get(parent_name, 0) + 1
+                    )
+
+        return {
+            "predicate": self._local_name(predicate_uri),
+            "count": len(triples),
+            "common_objects": [
+                {"object": name, "count": count}
+                for name, count in sorted(
+                    object_counts.items(),
+                    key=lambda item: (-item[1], item[0]),
+                )[:20]
             ],
-            "subclass_of": [
-                item["object"]["name"]
-                for item in properties
-                if item["predicate"] == str(RDFS.subClassOf) and "name" in item["object"]
+            "subject_parent_patterns": [
+                {"parent": name, "count": count}
+                for name, count in sorted(
+                    subject_parent_counts.items(),
+                    key=lambda item: (-item[1], item[0]),
+                )[:20]
             ],
-            "outgoing_assertions": [
-                {
-                    "subject": self._local_name(target_uri),
-                    "predicate": self._local_name(predicate),
-                    "object": self._format_value(obj),
-                }
-                for predicate, obj in self.g.predicate_objects(target_uri)
-                if predicate
-                not in {RDF.type, RDFS.label, RDFS.comment, RDFS.subClassOf}
-            ],
-            "incoming_assertions": [
-                {
-                    "subject": self._local_name(subject),
-                    "predicate": self._local_name(predicate),
-                    "object": self._local_name(target_uri),
-                }
-                for subject, predicate in self.g.subject_predicates(target_uri)
-                if isinstance(subject, URIRef)
-            ],
-            "count": len(properties),
+            "examples": triples[: int(limit)],
         }
 
     def insert_class_batch(self, classes, assertions=None):
@@ -406,6 +632,7 @@ class AgentInsertionTools:
             self.g.add((class_uri, RDFS.subClassOf, parent_uri))
             if item["comment"]:
                 self.g.add((class_uri, RDFS.comment, Literal(item["comment"], lang="en")))
+            self._resource_index = None
 
             relation_lines = []
             for relation in item["relations"]:
@@ -448,6 +675,7 @@ class AgentInsertionTools:
                 continue
 
             self.g.add(triple)
+            self._resource_index = None
             assertion_lines.append(
                 f"{self._format_turtle_term(subject)} "
                 f"{self._format_turtle_term(predicate)} "
@@ -523,7 +751,7 @@ class AgentInsert:
             }
         ]
 
-        # sliding window scratchpad, capped to last 6 tool observations
+        # sliding window scratchpad, capped to last 4 compact tool observations
         self.scratchpad = []
 
     def _system_prompt(self):
@@ -585,13 +813,21 @@ class AgentInsert:
 
             Tools:
             - query_subclass(parent_class_name): returns direct subclass names.
-            - inspect_class(target_class_name): returns class details plus outgoing
-              and incoming non-hierarchical assertions.
+            - find_resources(query, limit): finds retained resources by local
+              name, label, or comment.
+            - inspect_resource(target_name, include_incoming, include_literals,
+              predicate_filter, limit): returns arbitrary outgoing and incoming
+              predicates for any retained resource.
+            - inspect_predicate_usage(predicate_name, limit): returns compact
+              examples and patterns for any predicate in the retained ontology.
+            - inspect_class(target_class_name): compatibility alias for
+              inspect_resource(target_class_name).
             - insert_class_batch(classes, assertions): inserts missing classes and
               arbitrary outgoing or incoming assertions.
 
             Start traversal at Concept. Use the summary for the missing class
-            names, hierarchy, labels, descriptions, and exact asserted relations.
+            names, hierarchy, labels, and descriptions. Use traversal and class
+            inspection to ground likely non-hierarchical predicates.
             Inspect retained sibling or analogous resources when useful for
             identifying ontology predicates. Once grounded, insert the missing
             subgraph in one batch.
@@ -610,8 +846,21 @@ class AgentInsert:
 
             Class inspection:
             Thought: concise reason
-            Action: inspect_class
-            Action Input: {{"target_class_name": "ClassName"}}
+            Action: inspect_resource
+            Action Input: {{"target_name": "ClassName", "include_incoming": true,
+              "include_literals": false, "predicate_filter": null, "limit": 20}}
+            PAUSE
+
+            Resource search:
+            Thought: concise reason
+            Action: find_resources
+            Action Input: {{"query": "search terms", "limit": 12}}
+            PAUSE
+
+            Predicate pattern inspection:
+            Thought: concise reason
+            Action: inspect_predicate_usage
+            Action Input: {{"predicate_name": "supportsTask", "limit": 30}}
             PAUSE
 
             Insertion:
@@ -641,7 +890,7 @@ class AgentInsert:
                     "role": "user",
                     "content": (
                         "Compact traversal state so far:\n"
-                        + "\n".join(self.scratchpad[-6:])
+                        + "\n".join(self.scratchpad[-4:])
                     ),
                 }
             )
@@ -669,6 +918,9 @@ class AgentInsert:
             known_tools = {
                 "query_subclass": self.tools.query_subclass,
                 "inspect_class": self.tools.inspect_class,
+                "inspect_resource": self.tools.inspect_resource,
+                "inspect_predicate_usage": self.tools.inspect_predicate_usage,
+                "find_resources": self.tools.find_resources,
                 "insert_class_batch": self.tools.insert_class_batch,
             }
         else:

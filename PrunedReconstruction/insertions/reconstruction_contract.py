@@ -5,8 +5,8 @@ EVIDENCE_RULES = dedent(
     """
     Reconstruction rules:
     - Reconstruct the missing RDF subgraph, not only its class hierarchy.
-    - Include non-hierarchical predicates when the summary explicitly states
-      the exact subject, predicate, and object.
+    - Include non-hierarchical predicates when the summary, current ontology,
+      or tool observations provide concrete support for the assertion.
     - Restore both outgoing assertions from reconstructed resources and incoming
       assertions from retained resources.
     - Do not convert conceptual, possible, implied, schema-ready, or suggested
@@ -15,4 +15,3 @@ EVIDENCE_RULES = dedent(
     - Do not repeat triples already present in the current ontology.
     """
 ).strip()
-

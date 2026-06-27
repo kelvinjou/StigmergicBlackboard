@@ -24,10 +24,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from PrunedReconstruction.pruning.baseline_summarization import (
-    BaselineSummarization,
-    build_explicit_assertion_inventory,
-)
+from PrunedReconstruction.pruning.baseline_summarization import BaselineSummarization
 from agent import agent_query
 
 
@@ -69,21 +66,16 @@ for COMMUNITY in COMMUNITIES:
             detached_g.add(triple)
             modified_g.remove(triple)
 
-    # Generate shared reconstruction evidence for every experiment type.
-    # The prose preserves the human-readable task, while the exact assertion
-    # inventory prevents non-hierarchical edges from being silently omitted.
+    # Generate shared prose-only reconstruction evidence for every experiment
+    # type. This intentionally avoids exact connector inventories so experiments
+    # can test whether insertion methods recover non-hierarchical predicates
+    # without being handed subject-predicate-object triples.
     summary = BaselineSummarization()
     baseline_summarization_response = summary.send_messages(
-        f"Generate a thorough description about {COMMUNITY}, its subclasses, "
-        "and its exact asserted relations with other communities. Clearly "
-        "separate asserted relationships from conceptual implications."
+        f"Generate a prose summary about {COMMUNITY}, its subclasses, and its "
+        "broad role in the ontology."
     )
-    summary_text = (
-        str(baseline_summarization_response).strip()
-        + "\n\n"
-        + build_explicit_assertion_inventory(detached_g)
-        + "\n"
-    )
+    summary_text = str(baseline_summarization_response).strip() + "\n"
     print(summary_text)
 
     for EXPERIMENT_TYPE in EXPERIMENT_TYPES:

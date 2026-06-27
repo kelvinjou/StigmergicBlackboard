@@ -1,4 +1,4 @@
 experiment_type,num_trials,expected_connectors,predicted_connectors,recovered_connectors,missed_connectors,extra_connectors,connector_precision,connector_recall,connector_f1
-agent,8,78,88,71,7,17,0.8068181818181818,0.9102564102564102,0.8554216867469879
-baseline,8,78,88,71,7,17,0.8068181818181818,0.9102564102564102,0.8554216867469879
-sparql,8,78,95,72,6,23,0.7578947368421053,0.9230769230769231,0.8323699421965319
+agent,3,67,1,0,67,1,0.0,0.0,0
+baseline,1,8,4,0,8,4,0.0,0.0,0
+sparql,3,67,0,0,67,0,0,0.0,0

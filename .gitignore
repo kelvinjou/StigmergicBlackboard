@@ -3,5 +3,5 @@
 /__pycache__
 *.pyc
 /archive
-/dataset
+/dataset*
 /QueryBench/outputs

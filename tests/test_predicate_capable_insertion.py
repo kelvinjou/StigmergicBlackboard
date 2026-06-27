@@ -4,12 +4,9 @@ from pathlib import Path
 
 from rdflib import Graph, Literal, Namespace, RDF, RDFS
 
-from PrunedReconstruction.insertions.agent_insert import AgentInsertionTools
+from PrunedReconstruction.insertions.agent_insert import AgentInsert, AgentInsertionTools
 from PrunedReconstruction.insertions.bl_insert import BaselineInsert
 from PrunedReconstruction.insertions.sparql_insert import SparQLInsert
-from PrunedReconstruction.pruning.baseline_summarization import (
-    build_explicit_assertion_inventory,
-)
 
 
 EX = Namespace("http://example.org/test#")
@@ -123,6 +120,51 @@ class PredicateCapableInsertionTests(unittest.TestCase):
                 "references",
             )
 
+    def test_agent_can_search_and_inspect_arbitrary_predicate_patterns(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ttl_path = Path(temp_dir) / "ontology.ttl"
+            ttl_path.write_text(
+                """
+                @prefix : <http://example.org/test#> .
+                @prefix owl: <http://www.w3.org/2002/07/owl#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                :InteractionTechnique a owl:Class .
+                :SelectionTask a owl:Class ;
+                    rdfs:label "Selection Task"@en .
+                :TravelTask a owl:Class ;
+                    rdfs:label "Travel Task"@en .
+                :RayCasting a owl:Class ;
+                    rdfs:label "Ray Casting"@en ;
+                    rdfs:comment "Pointing technique for selecting targets."@en ;
+                    rdfs:subClassOf :InteractionTechnique ;
+                    :supportsTask :SelectionTask .
+                :Teleportation a owl:Class ;
+                    rdfs:subClassOf :InteractionTechnique ;
+                    :supportsTask :TravelTask .
+                """,
+                encoding="utf-8",
+            )
+
+            tools = AgentInsertionTools(ttl_path)
+            matches = tools.find_resources("ray selecting", limit=5)
+            usage = tools.inspect_predicate_usage("supportsTask")
+            filtered = tools.inspect_resource(
+                "RayCasting", predicate_filter="supportsTask"
+            )
+
+            self.assertEqual(matches["matches"][0]["name"], "RayCasting")
+            self.assertEqual(usage["predicate"], "supportsTask")
+            self.assertEqual(usage["count"], 2)
+            self.assertIn(
+                {"object": "SelectionTask", "count": 1},
+                usage["common_objects"],
+            )
+            self.assertEqual(
+                filtered["outgoing_assertions"][0]["object"],
+                "SelectionTask",
+            )
+
     def test_all_prompts_require_non_hierarchical_reconstruction(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             ttl_path = Path(temp_dir) / "ontology.ttl"
@@ -142,22 +184,12 @@ class PredicateCapableInsertionTests(unittest.TestCase):
 
             for prompt in (baseline_prompt, sparql_prompt):
                 self.assertIn("non-hierarchical predicates", prompt)
-                self.assertIn("assertions from retained resources", prompt)
+                self.assertIn("concrete support for the assertion", prompt)
 
-    def test_summary_inventory_preserves_exact_non_hierarchical_triples(self):
-        graph = Graph()
-        graph.bind("", EX)
-        graph.add((EX.Child, RDFS.subClassOf, EX.Parent))
-        graph.add((EX.Child, EX.supportsTask, EX.Task))
-        graph.add((EX.Source, EX.references, EX.Child))
-        graph.add((EX.Child, RDF.type, EX.CustomType))
-
-        inventory = build_explicit_assertion_inventory(graph)
-
-        self.assertIn(":Child :supportsTask :Task", inventory)
-        self.assertIn(":Source :references :Child", inventory)
-        self.assertIn(":Child rdf:type :CustomType", inventory)
-        self.assertNotIn("subClassOf", inventory)
+            agent_prompt = AgentInsert(ttl_path, summary_path).messages[0]["content"]
+            self.assertIn("inspect_resource", agent_prompt)
+            self.assertIn("inspect_predicate_usage", agent_prompt)
+            self.assertIn("find_resources", agent_prompt)
 
 
 if __name__ == "__main__":
