@@ -10,6 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from config import LLM_MODEL
 from LLMCompletionWrappers import client as llm_client
 from PrunedReconstruction.insertions.reconstruction_contract import EVIDENCE_RULES
+from PrunedReconstruction.predicate_vocabulary import format_predicate_vocabulary
 
 DEFAULT_MODEL = LLM_MODEL
 
@@ -20,6 +21,7 @@ class BaselineInsert:
         self.model = model
         self.modified_ttl_path = Path(modified_ttl_path).read_text(encoding="utf-8")
         self.summary = Path(summary_file_path).read_text(encoding="utf-8")
+        self.predicate_vocabulary = format_predicate_vocabulary()
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
@@ -33,6 +35,7 @@ class BaselineInsert:
                     f"{self.modified_ttl_path}\n\n"
                     "Summary:\n"
                     f"{self.summary}\n\n"
+                    f"{self.predicate_vocabulary}\n\n"
                     f"{EVIDENCE_RULES}\n\n"
                     "Class example:\n"
                     ":ClassName a owl:Class ;\n"

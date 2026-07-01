@@ -147,7 +147,27 @@ def token_metrics(insert_runner):
 
 def write_raw_output(paths, output):
     paths["raw_output"].parent.mkdir(parents=True, exist_ok=True)
-    paths["raw_output"].write_text(str(output), encoding="utf-8")
+    paths["raw_output"].write_text(
+        "" if output is None else str(output),
+        encoding="utf-8",
+    )
+
+
+def validate_agent_generation(paths, raw_output):
+    if raw_output is None or not str(raw_output).strip():
+        return "Agent returned no output."
+
+    output_text = paths["output_ttl"].read_text(encoding="utf-8")
+    if "AGENT GENERATION" not in output_text:
+        return "Agent produced no AGENT GENERATION block."
+
+    inserted_match = re.search(r"inserted_classes=(\d+)", str(raw_output))
+    if not inserted_match:
+        return "Agent output did not report class insertion."
+    if int(inserted_match.group(1)) < 1:
+        return "Agent produced an AGENT GENERATION block but inserted zero classes."
+
+    return ""
 
 
 def is_rate_limit_error(exc):
@@ -243,11 +263,14 @@ def run_agent(paths, model, max_turns, allow_traversal=True):
     )
     raw_output = agent_insert.run(max_turns=max_turns)
     write_raw_output(paths, raw_output)
+    ttl_syntax_valid = validate_ttl(paths["output_ttl"])
+    generation_error = validate_agent_generation(paths, raw_output)
 
     return {
         **token_metrics(agent_insert),
-        "ttl_syntax_valid": validate_ttl(paths["output_ttl"]),
+        "ttl_syntax_valid": ttl_syntax_valid and not generation_error,
         "sparql_query_valid": "",
+        "error": generation_error,
     }
 
 
@@ -297,6 +320,8 @@ def run_one_benchmark(
             metrics.update(run_sparql(paths, model))
         else:
             raise ValueError(f"Unsupported experiment type: {experiment_type}")
+        if metrics.get("error"):
+            error = metrics["error"]
     except Exception as exc:
         if is_rate_limit_error(exc):
             raise
@@ -447,7 +472,15 @@ def parse_args():
         ),
     )
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--max-turns", type=int, default=12)
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        default=None,
+        help=(
+            "Optional agent turn cap. Defaults to uncapped; baseline and SPARQL "
+            "ignore this option."
+        ),
+    )
     parser.add_argument("--dataset-root", default=PROJECT_ROOT / "dataset")
     parser.add_argument("--csv", default=PROJECT_ROOT / "benchmark_results.csv")
     parser.add_argument("--run-id", default=None)

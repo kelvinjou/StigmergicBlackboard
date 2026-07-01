@@ -24,7 +24,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from PrunedReconstruction.pruning.baseline_summarization import BaselineSummarization
+from PrunedReconstruction.pruning.baseline_summarization import (
+    BaselineSummarization,
+    build_fallback_summary,
+)
 from agent import agent_query
 
 
@@ -75,7 +78,14 @@ for COMMUNITY in COMMUNITIES:
         f"Generate a prose summary about {COMMUNITY}, its subclasses, and its "
         "broad role in the ontology."
     )
-    summary_text = str(baseline_summarization_response).strip() + "\n"
+    summary_text = str(baseline_summarization_response or "").strip()
+    if not summary_text:
+        summary_text = build_fallback_summary(detached_g, root_class)
+        print(
+            f"Warning: LLM returned an empty summary for {COMMUNITY}; "
+            "used deterministic fallback."
+        )
+    summary_text += "\n"
     print(summary_text)
 
     for EXPERIMENT_TYPE in EXPERIMENT_TYPES:

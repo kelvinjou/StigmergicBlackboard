@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from config import LLM_MODEL
 from LLMCompletionWrappers import client as llm_client
 from PrunedReconstruction.insertions.reconstruction_contract import EVIDENCE_RULES
+from PrunedReconstruction.predicate_vocabulary import format_predicate_vocabulary
 
 DEFAULT_MODEL = LLM_MODEL
 
@@ -729,6 +730,7 @@ class AgentInsert:
         self.modified_ttl_path = Path(modified_ttl_path)
         self.summary_file_path = Path(summary_file_path)
         self.summary = self.summary_file_path.read_text(encoding="utf-8")
+        self.predicate_vocabulary = format_predicate_vocabulary()
         self.model = model
         self.allow_traversal = allow_traversal
         generation_mode = (
@@ -744,6 +746,7 @@ class AgentInsert:
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
+        self.max_response_tokens = 4096
         self.messages = [
             {
                 "role": "system",
@@ -766,6 +769,8 @@ class AgentInsert:
                 Summary:
                 {self.summary}
 
+                {self.predicate_vocabulary}
+
                 {EVIDENCE_RULES}
 
                 Tool:
@@ -776,10 +781,9 @@ class AgentInsert:
                 a retained resource or from a retained resource to a reconstructed
                 resource. Do not output Turtle or markdown.
 
-                Every response must match exactly one of these shapes.
+                Respond with the tool call only. No reasoning prose.
 
                 Tool call:
-                Thought: concise reason
                 Action: insert_class_batch
                 Action Input: {{"classes": [{{"class_name": "...",
                   "parent_class_name": "...", "label": "...",
@@ -788,10 +792,6 @@ class AgentInsert:
                   {{"subject": "...", "predicate": "...", "object": "...",
                   "object_type": "uri"}}]}}
                 PAUSE
-
-                Completion:
-                Final Answer: inserted_classes=<count>;
-                inserted_assertions=<count>; classes=[ClassName, ...]
 
                 Do not add text before or after the selected shape.
                 """
@@ -808,6 +808,8 @@ class AgentInsert:
 
             Summary:
             {self.summary}
+
+            {self.predicate_vocabulary}
 
             {EVIDENCE_RULES}
 
@@ -832,6 +834,15 @@ class AgentInsert:
             identifying ontology predicates. Once grounded, insert the missing
             subgraph in one batch.
 
+            Efficiency rules:
+            - If the summary gives enough class names and a plausible retained
+              parent, call insert_class_batch immediately. The tool validates
+              whether the parent exists.
+            - Do not query Concept just to confirm an obvious parent.
+            - Use at most two inspection/search calls before insertion unless a
+              prior tool returns an error.
+            - Keep action inputs compact. Do not include reasoning prose.
+
             Rules:
             - Use one tool call per assistant response.
             - Do not output Turtle or markdown.
@@ -839,32 +850,27 @@ class AgentInsert:
             Every response must match exactly one of these shapes.
 
             Direct-subclass lookup:
-            Thought: concise reason
             Action: query_subclass
             Action Input: {{"parent_class_name": "ClassName"}}
             PAUSE
 
             Class inspection:
-            Thought: concise reason
             Action: inspect_resource
             Action Input: {{"target_name": "ClassName", "include_incoming": true,
               "include_literals": false, "predicate_filter": null, "limit": 20}}
             PAUSE
 
             Resource search:
-            Thought: concise reason
             Action: find_resources
             Action Input: {{"query": "search terms", "limit": 12}}
             PAUSE
 
             Predicate pattern inspection:
-            Thought: concise reason
             Action: inspect_predicate_usage
             Action Input: {{"predicate_name": "supportsTask", "limit": 30}}
             PAUSE
 
             Insertion:
-            Thought: concise reason
             Action: insert_class_batch
             Action Input: {{"classes": [{{"class_name": "...",
               "parent_class_name": "...", "label": "...",
@@ -873,10 +879,6 @@ class AgentInsert:
               {{"subject": "...", "predicate": "...", "object": "...",
               "object_type": "uri"}}]}}
             PAUSE
-
-            Completion:
-            Final Answer: inserted_classes=<count>;
-            inserted_assertions=<count>; classes=[ClassName, ...]
 
             Do not add text before or after the selected shape.
             """
@@ -898,6 +900,7 @@ class AgentInsert:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
+            max_tokens=self.max_response_tokens,
         )
         content = response.choices[0].message.content
         self.messages = messages + [{"role": "assistant", "content": content}]
@@ -908,12 +911,13 @@ class AgentInsert:
         return content
 
     # batch insert since once we find target community, everything else would be under that
-    def run(self, max_turns=12, verbose=True):
+    def run(self, max_turns=None, verbose=True):
         if self.allow_traversal:
             next_message = (
                 "Reconstruct and insert the missing ontology subgraph described in "
-                "the summary. Traverse from Concept first and follow one of the "
-                "required response shapes exactly."
+                "the summary. If the parent is clear, insert immediately; otherwise "
+                "use the minimum necessary inspection. Follow the required response "
+                "shape exactly."
             )
             known_tools = {
                 "query_subclass": self.tools.query_subclass,
@@ -934,7 +938,9 @@ class AgentInsert:
                 "insert_class_batch": self.tools.insert_class_batch,
             }
 
-        for _ in range(max_turns):
+        turn_count = 0
+        while max_turns is None or turn_count < max_turns:
+            turn_count += 1
             response = self.send_messages(next_message)
             if verbose:
                 print(response)
@@ -964,12 +970,24 @@ class AgentInsert:
             compact_result = _compact_observation(result)
             compact_json = json.dumps(compact_result, ensure_ascii=False)
             self.scratchpad.append(f"{action} -> {compact_json}")
+            if action == "insert_class_batch" and not (
+                isinstance(result, dict) and result.get("error")
+            ):
+                class_names = [
+                    item.get("class_name")
+                    for item in result.get("inserted", [])
+                    if isinstance(item, dict)
+                ]
+                return (
+                    f"inserted_classes={result.get('inserted_count', 0)}; "
+                    f"inserted_assertions={result.get('inserted_assertion_count', 0)}; "
+                    f"classes={class_names}"
+                )
             if self.allow_traversal:
                 next_message = (
-                    "Continue from the compact traversal state. If the parent is "
-                    "grounded, insert the missing community and all explicitly "
-                    "supported assertions in one batch. Follow one of the required "
-                    "response shapes exactly."
+                    "Continue from the compact state. If sufficiently grounded, "
+                    "insert now. Otherwise use one targeted inspection/search. "
+                    "Return only the required action shape."
                 )
             else:
                 next_message = (
@@ -979,4 +997,8 @@ class AgentInsert:
                     "Follow one of the required response shapes exactly."
                 )
 
-        return None
+        return (
+            "Agent stopped before insertion. "
+            f"max_turns={max_turns}; "
+            f"scratchpad_tail={self.scratchpad[-4:]}"
+        )

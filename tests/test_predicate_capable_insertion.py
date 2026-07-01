@@ -7,6 +7,7 @@ from rdflib import Graph, Literal, Namespace, RDF, RDFS
 from PrunedReconstruction.insertions.agent_insert import AgentInsert, AgentInsertionTools
 from PrunedReconstruction.insertions.bl_insert import BaselineInsert
 from PrunedReconstruction.insertions.sparql_insert import SparQLInsert
+from PrunedReconstruction.benchmark_runs import validate_agent_generation
 
 
 EX = Namespace("http://example.org/test#")
@@ -185,11 +186,79 @@ class PredicateCapableInsertionTests(unittest.TestCase):
             for prompt in (baseline_prompt, sparql_prompt):
                 self.assertIn("non-hierarchical predicates", prompt)
                 self.assertIn("concrete support for the assertion", prompt)
+                self.assertIn("Non-basic predicate vocabulary", prompt)
+                self.assertIn(":supportsTask", prompt)
+                self.assertIn(":coveredInChapter", prompt)
 
             agent_prompt = AgentInsert(ttl_path, summary_path).messages[0]["content"]
             self.assertIn("inspect_resource", agent_prompt)
             self.assertIn("inspect_predicate_usage", agent_prompt)
             self.assertIn("find_resources", agent_prompt)
+            self.assertIn("Non-basic predicate vocabulary", agent_prompt)
+            self.assertIn(":supportsTask", agent_prompt)
+
+    def test_agent_stops_after_successful_insert_without_final_llm_turn(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ttl_path = Path(temp_dir) / "ontology.ttl"
+            summary_path = Path(temp_dir) / "summary.txt"
+            ttl_path.write_text(
+                """
+                @prefix : <http://example.org/test#> .
+                @prefix owl: <http://www.w3.org/2002/07/owl#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                :Parent a owl:Class .
+                """,
+                encoding="utf-8",
+            )
+            summary_path.write_text("Recover Child under Parent.", encoding="utf-8")
+            agent = AgentInsert(ttl_path, summary_path)
+            calls = []
+
+            def fake_send_messages(_message):
+                calls.append(_message)
+                return (
+                    "Action: insert_class_batch\n"
+                    'Action Input: {"classes": [{"class_name": "Child", '
+                    '"parent_class_name": "Parent", "label": "Child", '
+                    '"comment": "Recovered child."}], "assertions": []}\n'
+                    "PAUSE"
+                )
+
+            agent.send_messages = fake_send_messages
+
+            result = agent.run(max_turns=3, verbose=False)
+
+            self.assertEqual(len(calls), 1)
+            self.assertIn("inserted_classes=1", result)
+
+    def test_benchmark_flags_agent_runs_without_generated_insertions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_ttl = Path(temp_dir) / "reinserted.ttl"
+            output_ttl.write_text(
+                "@prefix : <http://example.org/test#> .\n",
+                encoding="utf-8",
+            )
+            paths = {"output_ttl": output_ttl}
+
+            self.assertEqual(
+                validate_agent_generation(paths, None),
+                "Agent returned no output.",
+            )
+            self.assertEqual(
+                validate_agent_generation(paths, "inserted_classes=1; classes=['A']"),
+                "Agent produced no AGENT GENERATION block.",
+            )
+
+            output_ttl.write_text(
+                "@prefix : <http://example.org/test#> .\n"
+                "# AGENT GENERATION (TRAVERSAL + INSERTION TOOLS) OUTPUT\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                validate_agent_generation(paths, "inserted_classes=0; classes=[]"),
+                "Agent produced an AGENT GENERATION block but inserted zero classes.",
+            )
 
 
 if __name__ == "__main__":

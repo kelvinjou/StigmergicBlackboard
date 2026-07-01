@@ -1,8 +1,8 @@
 communities,status
 WayfindingTechnique,done
 Task,done
-DisplayDevice,done
-PassiveInputDevice,done
+DisplayDevice,untested
+PassiveInputDevice,untested
 CaveAutomaticVirtualEnvironment,untested
 MagneticTracker,untested
 Ergonomics,untested
