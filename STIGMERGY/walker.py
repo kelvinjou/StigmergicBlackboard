@@ -9,15 +9,19 @@ high scoring nodes: cached LLM sniff/proposal
 import time
 from pathlib import Path
 import pickle
-from rdflib import Graph, URIRef
+from rdflib import Graph, Namespace, URIRef
 from rdflib.namespace import RDFS
 import random
 from sentence_transformers import SentenceTransformer
 
-ONTOLOGY_EMBEDDING_CACHE_PATH = Path("community_embeddings.pkl")
-SUMMARY_EMBEDDING_CACHE_PATH = Path("summary_embeddings.pkl")
-MAIN_ONTOLOGY = Path("simplified_xr.ttl")
-SUMMARY = Path("summary.txt")
+ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
+SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
+MAIN_ONTOLOGY = Path("_raw_inputs/simplified_xr.ttl")
+SUMMARY = Path("_raw_inputs/summary.txt")
+
+EX = Namespace("http://example.org/3dui-ontology#")
+g = Graph()
+g.parse("_raw_inputs/simplified_xr.ttl", format="ttl")
 
 def _seed_random_comm(communities):
     random.seed(10)
@@ -153,29 +157,64 @@ def _summary_embedding_similarity():
     else:
         write_to_cache()
 
+
+def _starting_community():
+
+    concept_class = URIRef("http://example.org/3dui-ontology#Concept")
+
+    communities = list(g.transitive_subjects(RDFS.subClassOf, concept_class))
+    # exclude the :Concept itself
+    communities.remove(concept_class)
+
+    if communities:
+        random_community = _seed_random_comm(communities=communities)
+        print(f"Randomly selected community: {random_community}")
+    else:
+        print("No communities found in the ontology.")
+
+
+# start traversal, sniff every node and compare. 
+# steps per trial: N = 5 (for a small ontology like this)
+# K = 10 trials
+# 0.6 top down, 0.3 adjacent, Levy jump 0.1
+
+
+def _adjacent_walk(current_community) -> URIRef | None:
+    """must get node's parents, and then examine its children"""
+    def get_siblings() -> list[URIRef]:
+        siblings = set()
+        parents = g.objects(current_community, RDFS.subClassOf)
+
+        for parent in parents:
+            # find all direct children of that parent
+            for sibling in g.subjects(RDFS.subClassOf, parent):
+                if sibling != current_community:
+                    siblings.add(sibling)
+        return list(siblings)
+
+    siblings = get_siblings()
+    if not siblings:
+        return None
+    return _seed_random_comm(siblings)
+    
+
+def _direct_child_walk():
+    pass
+
+def _levy_jump():
+    pass
+
+
 if __name__ == "__main__":
     start = time.time()
 
-    _ontology_embedding_similarity()
-    _summary_embedding_similarity()
+    # _ontology_embedding_similarity()
+    # _summary_embedding_similarity()
+
+    concept_class = URIRef("http://example.org/3dui-ontology#Task")
+    print(_adjacent_walk(concept_class))
 
     end = time.time()
     print(f"Finished in: {end - start}")
 
 
-# g = Graph()
-# g.parse("simplified_xr.ttl", format="ttl")
-
-# concept_class = URIRef("http://example.org/3dui-ontology#Concept")
-
-# communities = list(g.transitive_subjects(RDFS.subClassOf, concept_class))
-# # exclude the :Concept itself
-# communities.remove(concept_class)
-
-# # print(communities)
-
-# if communities:
-#     random_community = _seed_random_comm(communities=communities)
-#     print(f"Randomly selected community: {random_community}")
-# else:
-#     print("No communities found in the ontology.")
