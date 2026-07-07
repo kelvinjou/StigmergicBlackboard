@@ -6,13 +6,14 @@ every node: cheap embedding similarity (modified TTL v. summary)
 - comparing modified_original TTL community to summary.txt file
 high scoring nodes: cached LLM sniff/proposal
 """
+from __future__ import annotations
+
 import time
 from pathlib import Path
 import pickle
 from rdflib import Graph, Namespace, URIRef
 from rdflib.namespace import RDFS
 import random
-from sentence_transformers import SentenceTransformer
 
 ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
 SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
@@ -22,10 +23,18 @@ SUMMARY = Path("_raw_inputs/summary.txt")
 EX = Namespace("http://example.org/3dui-ontology#")
 g = Graph()
 g.parse("_raw_inputs/simplified_xr.ttl", format="ttl")
+RNG = random.Random(10)
 
-def _seed_random_comm(communities):
-    random.seed(10)
-    return random.choice(communities)
+def _seed_random_comm(communities: list[URIRef]) -> URIRef:
+    return RNG.choice(communities)
+
+def _get_communities() -> list[URIRef]:
+    concept_class = URIRef("http://example.org/3dui-ontology#Concept")
+    return [
+        community
+        for community in g.transitive_subjects(RDFS.subClassOf, concept_class)
+        if isinstance(community, URIRef) and community != concept_class
+    ]
 
 """ creates embeddings of each community in the main ontology
         - embedding coordinates are cached in .pkl file "community_embeddings" """
@@ -39,7 +48,7 @@ def _ontology_embedding_similarity():
         Subclass of: Domain Concept
         Relation: Evaluation Method | owl:disjointWith | Design Principle
         Relation: Evaluation Method | rdf:type | owl:Class """
-    def _extract_TTL_community_context() -> list[str]:
+    def _extract_TTL_community_context() -> tuple[list[URIRef], list[str]]:
         graph = Graph()
         graph.parse(MAIN_ONTOLOGY, format="ttl")
 
@@ -83,31 +92,70 @@ def _ontology_embedding_similarity():
             lines.extend(sorted(other_relations))
             community_contexts.append("\n".join(lines))
 
-        return community_contexts
+        return communities, community_contexts
 
-    descriptions = _extract_TTL_community_context()
+    community_uris, descriptions = _extract_TTL_community_context()
 
     def write_to_cache():
+        from sentence_transformers import SentenceTransformer
+
         model = SentenceTransformer("BAAI/bge-small-en-v1.5")
         embeddings = model.encode(descriptions)
-        with ONTOLOGY_EMBEDDING_CACHE_PATH.open("wb") as f:
-            pickle.dump(
-                {
-                    "descriptions": descriptions,
-                    "embeddings": embeddings
-                }, 
-                f,
+
+        items = {
+            str(uri): {
+                "description": description,
+                "embedding": embedding,
+            }
+            for uri, description, embedding in zip(
+                community_uris,
+                descriptions,
+                embeddings,
             )
+        }
+
+        """
+        {
+            "model": "BAAI/bge-small-en-v1.5",
+            "uris": [
+                "http://example.org/3dui-ontology#TravelTechnique",
+                ...
+            ],
+            "items": {
+                "http://example.org/3dui-ontology#TravelTechnique": {
+                    "description": "...",
+                    "embedding": embedding,
+                },
+                ...
+            },
+        }
+        """
+        cache = {
+            "model": "BAAI/bge-small-en-v1.5",
+            "uris": [str(uri) for uri in community_uris],
+            "items": items,
+        }
+
+        with ONTOLOGY_EMBEDDING_CACHE_PATH.open("wb") as f:
+            pickle.dump(cache, f)
+        return cache
 
     if ONTOLOGY_EMBEDDING_CACHE_PATH.exists():
         with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as f:
             cached = pickle.load(f)
-        if cached["descriptions"] == descriptions: # no change, just load embeddings from cache
-            embeddings = cached["embeddings"]
+        if (
+            cached.get("uris") == [str(uri) for uri in community_uris]
+            and [
+                cached["items"][str(uri)]["description"]
+                for uri in community_uris
+                if str(uri) in cached.get("items", {})
+            ] == descriptions
+        ): # no change, just load embeddings from cache
+            return cached
         else: # update it if raw descriptions are different
-            write_to_cache()
+            return write_to_cache()
     else:
-        write_to_cache()
+        return write_to_cache()
 
     """
     # FOR COMPARISONS
@@ -137,6 +185,8 @@ def _summary_embedding_similarity():
     descriptions = _extract_summary_txt()
 
     def write_to_cache():
+        from sentence_transformers import SentenceTransformer
+
         model = SentenceTransformer("BAAI/bge-small-en-v1.5")
         embeddings = model.encode(descriptions)
         with SUMMARY_EMBEDDING_CACHE_PATH.open("wb") as f:
@@ -158,26 +208,16 @@ def _summary_embedding_similarity():
         write_to_cache()
 
 
-def _starting_community():
-
-    concept_class = URIRef("http://example.org/3dui-ontology#Concept")
-
-    communities = list(g.transitive_subjects(RDFS.subClassOf, concept_class))
-    # exclude the :Concept itself
-    communities.remove(concept_class)
+def _starting_community() -> URIRef | None:
+    communities = _get_communities()
 
     if communities:
         random_community = _seed_random_comm(communities=communities)
         print(f"Randomly selected community: {random_community}")
+        return random_community
     else:
         print("No communities found in the ontology.")
-
-
-# start traversal, sniff every node and compare. 
-# steps per trial: N = 5 (for a small ontology like this)
-# K = 10 trials
-# 0.6 top down, 0.3 adjacent, Levy jump 0.1
-
+        return None
 
 def _adjacent_walk(current_community) -> URIRef | None:
     """must get node's parents, and then examine its children"""
@@ -188,7 +228,7 @@ def _adjacent_walk(current_community) -> URIRef | None:
         for parent in parents:
             # find all direct children of that parent
             for sibling in g.subjects(RDFS.subClassOf, parent):
-                if sibling != current_community:
+                if isinstance(sibling, URIRef) and sibling != current_community:
                     siblings.add(sibling)
         return list(siblings)
 
@@ -197,24 +237,101 @@ def _adjacent_walk(current_community) -> URIRef | None:
         return None
     return _seed_random_comm(siblings)
     
+def _direct_child_walk(current_community) -> URIRef | None:
+    children = [
+        child
+        for child in g.subjects(RDFS.subClassOf, current_community)
+        if isinstance(child, URIRef)
+    ]
+    if not children:
+        return None
+    return _seed_random_comm(children)
 
-def _direct_child_walk():
-    pass
+def _levy_jump() -> URIRef | None:
+    connected_communities = [
+        community
+        for community in _get_communities()
+        if any(g.triples((community, None, None)))
+        or any(g.triples((None, None, community)))
+    ]
 
-def _levy_jump():
-    pass
+    if not connected_communities:
+        return None
+    return _seed_random_comm(connected_communities)
+
+def _compare_similarity_at_walk(current_community):
+    # compare the embeddings of community during walk and 1 piece of evidence
+    # access embeddings given community
+
+    # open the pkl for the ontology
+    # TODO: here
+    with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as f:
+        cache = pickle.load(f)
+        # print(cache["items"].keys())
+        print(cache["items"][str(current_community)])
 
 
+
+def walk(trial_count=5, steps_per_trial=10):
+    walk_options = [
+        ("top down", _direct_child_walk, 0.6),
+        ("adjacent", _adjacent_walk, 0.3),
+        ("levy jump", _levy_jump, 0.1),
+    ]
+
+    for trial in range(1, trial_count + 1):
+        current_community = _starting_community()
+        if current_community is None:
+            return
+
+        print(f"\nTrial {trial} start: {current_community}")
+
+
+        # code here
+
+
+        for step in range(1, steps_per_trial + 1):
+            walk_name, walk_function, _ = RNG.choices(
+                walk_options,
+                weights=[weight for _, _, weight in walk_options],
+                k=1,
+            )[0]
+
+            if walk_name == "levy jump":
+                next_community = walk_function()
+            else:
+                next_community = walk_function(current_community)
+
+            if next_community is None:
+                print(
+                    f"Trial {trial}, step {step}: {walk_name} from "
+                    f"{current_community} -> no available move"
+                )
+                continue
+
+            print(
+                f"Trial {trial}, step {step}: {walk_name} from "
+                f"{current_community} -> {next_community}"
+            )
+            current_community = next_community
+    
 if __name__ == "__main__":
     start = time.time()
 
     # _ontology_embedding_similarity()
     # _summary_embedding_similarity()
 
-    concept_class = URIRef("http://example.org/3dui-ontology#Task")
-    print(_adjacent_walk(concept_class))
+    # concept_class = URIRef("http://example.org/3dui-ontology#Task")
+    # print(_adjacent_walk(concept_class))
+
+    # walk(trial_count=3, steps_per_trial=10)
+    # cache["items"][str(EX.TravelTechnique)]["embedding"]
+
+    _compare_similarity_at_walk(EX.TravelTechnique)
 
     end = time.time()
     print(f"Finished in: {end - start}")
 
-
+# after these runs, use LLMs to look into hotspots
+# split summary into two files (one for hierarchal reconstruction and one for additional evidence?)
+# so that the embeddings don't get polluted with hierarchy construction data: but how do u differentiate even...
