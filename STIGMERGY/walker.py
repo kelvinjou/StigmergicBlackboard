@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+import numpy as np
 import pickle
 from rdflib import Graph, Namespace, URIRef
 from rdflib.namespace import RDFS
 import random
+from sentence_transformers import SentenceTransformer
 
 ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
 SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
@@ -185,7 +187,6 @@ def _summary_embedding_similarity():
     descriptions = _extract_summary_txt()
 
     def write_to_cache():
-        from sentence_transformers import SentenceTransformer
 
         model = SentenceTransformer("BAAI/bge-small-en-v1.5")
         embeddings = model.encode(descriptions)
@@ -206,7 +207,6 @@ def _summary_embedding_similarity():
             write_to_cache()
     else:
         write_to_cache()
-
 
 def _starting_community() -> URIRef | None:
     communities = _get_communities()
@@ -260,16 +260,24 @@ def _levy_jump() -> URIRef | None:
     return _seed_random_comm(connected_communities)
 
 def _compare_similarity_at_walk(current_community):
-    # compare the embeddings of community during walk and 1 piece of evidence
-    # access embeddings given community
+    model = SentenceTransformer("BAAI/bge-small-en-v1.5")
 
-    # open the pkl for the ontology
-    # TODO: here
-    with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as f:
-        cache = pickle.load(f)
-        # print(cache["items"].keys())
-        print(cache["items"][str(current_community)])
+    with (
+        SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed,
+        ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as ont_embed,
+    ):
+        summaries = pickle.load(sum_embed)
+        ontology = pickle.load(ont_embed)
 
+        descriptions = summaries["descriptions"]
+        embeddings = summaries["embeddings"]
+
+        community = ontology["items"][str(current_community)]
+        community_embedding = community["embedding"]
+        for description, embedding in zip(descriptions, embeddings):
+            
+            score = model.similarity(embedding, community_embedding)
+            print(f"{score} <-- {community["description"]} VS {description}")
 
 
 def walk(trial_count=5, steps_per_trial=10):
