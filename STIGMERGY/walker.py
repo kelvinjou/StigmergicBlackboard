@@ -14,8 +14,16 @@ import numpy as np
 import pickle
 from rdflib import Graph, Namespace, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
-import random
 from sentence_transformers import SentenceTransformer
+
+from llm.lmstudio_llm import LMStudioLLM
+from walk_strategies import (
+    RNG,
+    _adjacent_walk,
+    _direct_child_walk,
+    _levy_jump,
+    _starting_community,
+)
 
 ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
 SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
@@ -23,23 +31,8 @@ MAIN_ONTOLOGY = Path("_raw_inputs/simplified_xr.ttl")
 SUMMARY = Path("_raw_inputs/summary.txt")
 
 EX = Namespace("http://example.org/3dui-ontology#")
-g = Graph()
-g.parse("_raw_inputs/simplified_xr.ttl", format="ttl")
-RNG = random.Random(10)
 
 model = SentenceTransformer("BAAI/bge-small-en-v1.5")
-
-
-def _seed_random_comm(communities: list[URIRef]) -> URIRef:
-    return RNG.choice(communities)
-
-def _get_communities() -> list[URIRef]:
-    concept_class = URIRef("http://example.org/3dui-ontology#Concept")
-    return [
-        community
-        for community in g.transitive_subjects(RDFS.subClassOf, concept_class)
-        if isinstance(community, URIRef) and community != concept_class
-    ]
 
 """ creates embeddings of each community in the main ontology
         - embedding coordinates are cached in .pkl file "community_embeddings" """
@@ -266,56 +259,15 @@ def _summary_embedding_similarity():
     else:
         write_to_cache()
 
-def _starting_community() -> URIRef | None:
-    communities = _get_communities()
-
-    if communities:
-        random_community = _seed_random_comm(communities=communities)
-        print(f"Randomly selected community: {random_community}")
-        return random_community
-    else:
-        print("No communities found in the ontology.")
-        return None
-
-def _adjacent_walk(current_community) -> URIRef | None:
-    """must get node's parents, and then examine its children"""
-    def get_siblings() -> list[URIRef]:
-        siblings = set()
-        parents = g.objects(current_community, RDFS.subClassOf)
-
-        for parent in parents:
-            # find all direct children of that parent
-            for sibling in g.subjects(RDFS.subClassOf, parent):
-                if isinstance(sibling, URIRef) and sibling != current_community:
-                    siblings.add(sibling)
-        return list(siblings)
-
-    siblings = get_siblings()
-    if not siblings:
-        return None
-    return _seed_random_comm(siblings)
-    
-def _direct_child_walk(current_community) -> URIRef | None:
-    children = [
-        child
-        for child in g.subjects(RDFS.subClassOf, current_community)
-        if isinstance(child, URIRef)
-    ]
-    if not children:
-        return None
-    return _seed_random_comm(children)
-
-def _levy_jump() -> URIRef | None:
-    connected_communities = [
-        community
-        for community in _get_communities()
-        if any(g.triples((community, None, None)))
-        or any(g.triples((None, None, community)))
-    ]
-
-    if not connected_communities:
-        return None
-    return _seed_random_comm(connected_communities)
+def _generate_llm_relational_description(ontology, evidence):
+    llm = LMStudioLLM() # swap with NVIDIANIMLLM if needed
+    response = llm.send_messages(
+        f"""
+            Evidence 1: {ontology}
+            Evidence 2: {evidence}
+        """
+    )
+    return response
 
 def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
     structure_weight = 1.0 - semantic_weight
@@ -348,8 +300,17 @@ def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
                 f"Structure text: {community['structure_description']}\n"
                 f"Summary text: {description}\n"
             )
+            
+            if final_score > 0.6:
+                ontology = f"""
+                    Semantic text: {community['semantic_description']}
+                    Structure text: {community['structure_description']}
+                """
+                response = _generate_llm_relational_description(ontology=ontology, evidence=description)
+                print(response)
 
 
+# Random-walk orchestration.
 def walk(trial_count=5, steps_per_trial=10):
     walk_options = [
         ("top down", _direct_child_walk, 0.6),
@@ -370,7 +331,7 @@ def walk(trial_count=5, steps_per_trial=10):
                 weights=[weight for _, _, weight in walk_options],
                 k=1,
             )[0]
-
+            # per community is here
             _compare_similarity_at_walk(current_community=current_community)
 
 
