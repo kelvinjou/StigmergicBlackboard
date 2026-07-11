@@ -1,0 +1,165 @@
+"""
+pick a new start to the node every time
+do the stateless random walk. 
+
+every node: cheap embedding similarity (modified TTL v. summary)
+- comparing modified_original TTL community to summary.txt file
+high scoring nodes: cached LLM sniff/proposal
+"""
+from __future__ import annotations
+
+import time
+import pickle
+from rdflib import Namespace
+
+from llm.lmstudio_llm import LMStudioLLM
+from src.preprocessing import (
+    ONTOLOGY_EMBEDDING_CACHE_PATH,
+    SUMMARY_EMBEDDING_CACHE_PATH,
+    _ontology_embedding_similarity,
+    _summary_embedding_similarity,
+    model,
+)
+from src.walk_strategies import (
+    RNG,
+    _adjacent_walk,
+    _direct_child_walk,
+    _levy_jump,
+    _starting_community,
+)
+
+EX = Namespace("http://example.org/3dui-ontology#")
+
+def _generate_llm_relational_description(ontology, evidence):
+    llm = LMStudioLLM() # swap with NVIDIANIMLLM if needed
+    response = llm.send_messages(
+        f"""
+            Evidence 1: {ontology}
+            Evidence 2: {evidence}
+        """
+    )
+    return response
+
+def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
+    structure_weight = 1.0 - semantic_weight
+
+    with (
+        SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed,
+        ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as ont_embed,
+    ):
+        summaries = pickle.load(sum_embed)
+        ontology = pickle.load(ont_embed)
+
+        descriptions = summaries["descriptions"]
+        embeddings = summaries["embeddings"]
+
+        community = ontology["items"][str(current_community)]
+        semantic_embedding = community["semantic_embedding"]
+        structure_embedding = community["structure_embedding"]
+        for description, embedding in zip(descriptions, embeddings):
+            semantic_score = model.similarity(embedding, semantic_embedding).item()
+            structure_score = model.similarity(embedding, structure_embedding).item()
+            final_score = (
+                semantic_weight * semantic_score
+                + structure_weight * structure_score
+            )
+            print(
+                f"semantic={semantic_score:.4f} "
+                f"structure={structure_score:.4f} "
+                f"final={final_score:.4f}\n"
+                f"Semantic text: {community['semantic_description']}\n"
+                f"Structure text: {community['structure_description']}\n"
+                f"Summary text: {description}\n"
+            )
+            
+            if final_score > 0.6:
+                ontology = f"""
+                    Semantic text: {community['semantic_description']}
+                    Structure text: {community['structure_description']}
+                """
+                response = _generate_llm_relational_description(ontology=ontology, evidence=description)
+                print(response)
+
+
+# Random-walk orchestration.
+def walk(trial_count=5, steps_per_trial=10):
+    walk_options = [
+        ("top down", _direct_child_walk, 0.6),
+        ("adjacent", _adjacent_walk, 0.3),
+        ("levy jump", _levy_jump, 0.1),
+    ]
+
+    for trial in range(1, trial_count + 1):
+        current_community = _starting_community()
+        if current_community is None:
+            return
+
+        print(f"\nTrial {trial} start: {current_community}")
+
+        for step in range(1, steps_per_trial + 1):
+            walk_name, walk_function, _ = RNG.choices(
+                walk_options,
+                weights=[weight for _, _, weight in walk_options],
+                k=1,
+            )[0]
+            # per community is here
+            _compare_similarity_at_walk(current_community=current_community)
+
+
+            if walk_name == "levy jump":
+                next_community = walk_function()
+            else:
+                next_community = walk_function(current_community)
+
+            if next_community is None:
+                print(
+                    f"Trial {trial}, step {step}: {walk_name} from "
+                    f"{current_community} -> no available move"
+                )
+                continue
+
+            print(
+                f"Trial {trial}, step {step}: {walk_name} from "
+                f"{current_community} -> {next_community}"
+            )
+            current_community = next_community
+    
+if __name__ == "__main__":
+    start = time.time()
+    # _ontology_embedding_similarity()
+    # _summary_embedding_similarity()
+
+    # concept_class = URIRef("http://example.org/3dui-ontology#Task")
+    # print(_adjacent_walk(concept_class))
+
+    walk(trial_count=3, steps_per_trial=10)
+    # cache["items"][str(EX.TravelTechnique)]["embedding"]
+
+    # _compare_similarity_at_walk(EX.TravelTechnique)
+
+    end = time.time()
+    print(f"Finished in: {end - start}")
+
+"""
+07/10/26: for the community embeddings, do not embed 
+
+Community: Task
+Label: Task
+Comment: A unit of work that a user seeks to accomplish within a 3D user interface.
+Subclass of: Domain Concept
+Relation: Task | owl:disjointWith | Design Principle
+Relation: Task | owl:disjointWith | Evaluation Method
+Relation: Task | owl:disjointWith | UI Component
+Relation: Task | rdf:type | owl:Class VS A unit of work that can involve practical warehouse optimization using virtual reality
+
+it's metadata dilution
+
+CHANGE TO: 
+Task. A unit of work that a user seeks to accomplish within a 3D user interface.
+
+the relations are useful but it answers "where does this class sit in the ontology. They should be scored separately?
+"""
+
+# after these runs, use LLMs to look into hotspots
+# split summary into two files (one for hierarchal reconstruction and one for additional evidence?)
+# so that the embeddings don't get polluted with hierarchy construction data: but how do u differentiate even...
