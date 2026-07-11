@@ -8,11 +8,15 @@ high scoring nodes: cached LLM sniff/proposal
 """
 from __future__ import annotations
 
+from pathlib import Path
 import time
 import pickle
+import uuid
+from openai import APIConnectionError, APIStatusError
 from rdflib import Namespace
 
 from llm.lmstudio_llm import LMStudioLLM
+from src.helper import _load_blackboard_items, _write_blackboard_items
 from src.preprocessing import (
     ONTOLOGY_EMBEDDING_CACHE_PATH,
     SUMMARY_EMBEDDING_CACHE_PATH,
@@ -28,17 +32,48 @@ from src.walk_strategies import (
     _starting_community,
 )
 
+BLACKBOARD = Path("_raw_outputs/blackboard.jsonl") # using jsonl b/c this file is continuously being updated. If using JSON, you must load the whole thing
+
 EX = Namespace("http://example.org/3dui-ontology#")
+
+def _append_blackboard_blurb(community_id, community, final_score, evidence, blurb):
+    blackboard_items = _load_blackboard_items(BLACKBOARD)
+
+    if community_id not in blackboard_items:
+        blackboard_items[community_id] = {
+            "id": str(uuid.uuid4()),
+            "community_id": community_id,
+            "community": community["semantic_description"],
+            "conf": final_score,
+            "blurb": [],
+        }
+
+    blackboard_items[community_id]["conf"] = max(
+        blackboard_items[community_id]["conf"],
+        final_score,
+    )
+    blackboard_items[community_id]["blurb"].append(
+        {
+            "evidence": evidence,
+            "text": blurb,
+            "conf": final_score,
+        }
+    )
+    _write_blackboard_items(BLACKBOARD, blackboard_items)
 
 def _generate_llm_relational_description(ontology, evidence):
     llm = LMStudioLLM() # swap with NVIDIANIMLLM if needed
-    response = llm.send_messages(
-        f"""
-            Evidence 1: {ontology}
-            Evidence 2: {evidence}
-        """
-    )
-    return response
+    try:
+        response = llm.send_messages(
+            f"""
+                Evidence 1: {ontology}
+                Evidence 2: {evidence}
+            """
+        )
+        return response
+    except (APIConnectionError, APIStatusError) as error:
+        print(f"Skipping LLM blurb: {error}")
+        return None
 
 def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
     structure_weight = 1.0 - semantic_weight
@@ -77,8 +112,18 @@ def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
                     Semantic text: {community['semantic_description']}
                     Structure text: {community['structure_description']}
                 """
-                response = _generate_llm_relational_description(ontology=ontology, evidence=description)
-                print(response)
+                blurb = _generate_llm_relational_description(ontology=ontology, evidence=description)
+                if blurb is None:
+                    print("Something went wrong? Perchance")
+                    continue
+
+                _append_blackboard_blurb(
+                    community_id=str(current_community),
+                    community=community,
+                    final_score=final_score,
+                    evidence=description,
+                    blurb=blurb,
+                )
 
 
 # Random-walk orchestration.
