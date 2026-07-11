@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import pickle
 from rdflib import Graph, Namespace, URIRef
-from rdflib.namespace import RDFS
+from rdflib.namespace import OWL, RDF, RDFS
 import random
 from sentence_transformers import SentenceTransformer
 
@@ -26,6 +26,9 @@ EX = Namespace("http://example.org/3dui-ontology#")
 g = Graph()
 g.parse("_raw_inputs/simplified_xr.ttl", format="ttl")
 RNG = random.Random(10)
+
+model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+
 
 def _seed_random_comm(communities: list[URIRef]) -> URIRef:
     return RNG.choice(communities)
@@ -50,7 +53,7 @@ def _ontology_embedding_similarity():
         Subclass of: Domain Concept
         Relation: Evaluation Method | owl:disjointWith | Design Principle
         Relation: Evaluation Method | rdf:type | owl:Class """
-    def _extract_TTL_community_context() -> tuple[list[URIRef], list[str]]:
+    def _extract_TTL_community_context() -> tuple[list[URIRef], list[str], list[str]]:
         graph = Graph()
         graph.parse(MAIN_ONTOLOGY, format="ttl")
 
@@ -73,46 +76,98 @@ def _ontology_embedding_similarity():
                 return graph.namespace_manager.normalizeUri(node)
             return str(node)
 
-        community_contexts = []
-        explicit_predicates = {RDFS.label, RDFS.comment, RDFS.subClassOf}
+        semantic_contexts = []
+        structure_contexts = []
+        structural_predicates = {
+            RDFS.subClassOf,
+            RDF.type,
+            OWL.disjointWith,
+        }
 
         for community in communities:
-            lines = [f"Community: {_name(community)}"]
+            label = labels.get(community, graph.namespace_manager.normalizeUri(community))
 
-            for label in graph.objects(community, RDFS.label):
-                lines.append(f"Label: {label}")
-            for comment in graph.objects(community, RDFS.comment):
-                lines.append(f"Comment: {comment}")
-            for parent in graph.objects(community, RDFS.subClassOf):
-                lines.append(f"Subclass of: {_name(parent)}")
-
-            other_relations = [
-                f"Relation: {_name(subject)} | {_name(predicate)} | {_name(obj)}"
-                for subject, predicate, obj in graph.triples((community, None, None))
-                if predicate not in explicit_predicates
+            comments = [
+                str(comment)
+                for comment in graph.objects(community, RDFS.comment)
             ]
-            lines.extend(sorted(other_relations))
-            community_contexts.append("\n".join(lines))
 
-        return communities, community_contexts
+            text_parts = [label, *comments]
+            semantic_contexts.append(". ".join(text_parts))
 
-    community_uris, descriptions = _extract_TTL_community_context()
+            structure_lines = []
+            for parent in graph.objects(community, RDFS.subClassOf):
+                structure_lines.append(f"{label} is a subclass of {_name(parent)}.")
+            for subject, predicate, obj in graph.triples((community, None, None)):
+                if predicate in structural_predicates and predicate != RDFS.subClassOf:
+                    structure_lines.append(
+                        f"{_name(subject)} {_name(predicate)} {_name(obj)}."
+                    )
+            structure_contexts.append(" ".join(sorted(structure_lines)))
+
+        return communities, semantic_contexts, structure_contexts
+
+        """ prior to 07/10/26 """
+        # def _name(node):
+        #     if node in labels:
+        #         return labels[node]
+        #     if isinstance(node, URIRef):
+        #         return graph.namespace_manager.normalizeUri(node)
+        #     return str(node)
+
+        # community_contexts = []
+        # explicit_predicates = {RDFS.label, RDFS.comment, RDFS.subClassOf}
+
+        # for community in communities:
+        #     lines = [f"Community: {_name(community)}"]
+
+        #     for label in graph.objects(community, RDFS.label):
+        #         lines.append(f"Label: {label}")
+        #     for comment in graph.objects(community, RDFS.comment):
+        #         lines.append(f"Comment: {comment}")
+        #     for parent in graph.objects(community, RDFS.subClassOf):
+        #         lines.append(f"Subclass of: {_name(parent)}")
+
+        #     other_relations = [
+        #         f"Relation: {_name(subject)} | {_name(predicate)} | {_name(obj)}"
+        #         for subject, predicate, obj in graph.triples((community, None, None))
+        #         if predicate not in explicit_predicates
+        #     ]
+        #     lines.extend(sorted(other_relations))
+        #     community_contexts.append("\n".join(lines))
+
+        # return communities, community_contexts
+
+    community_uris, semantic_descriptions, structure_descriptions = (
+        _extract_TTL_community_context()
+    )
 
     def write_to_cache():
         from sentence_transformers import SentenceTransformer
 
         model = SentenceTransformer("BAAI/bge-small-en-v1.5")
-        embeddings = model.encode(descriptions)
+        semantic_embeddings = model.encode(semantic_descriptions)
+        structure_embeddings = model.encode(structure_descriptions)
 
         items = {
             str(uri): {
-                "description": description,
-                "embedding": embedding,
+                "semantic_description": semantic_description,
+                "semantic_embedding": semantic_embedding,
+                "structure_description": structure_description,
+                "structure_embedding": structure_embedding,
             }
-            for uri, description, embedding in zip(
+            for (
+                uri,
+                semantic_description,
+                semantic_embedding,
+                structure_description,
+                structure_embedding,
+            ) in zip(
                 community_uris,
-                descriptions,
-                embeddings,
+                semantic_descriptions,
+                semantic_embeddings,
+                structure_descriptions,
+                structure_embeddings,
             )
         }
 
@@ -148,10 +203,15 @@ def _ontology_embedding_similarity():
         if (
             cached.get("uris") == [str(uri) for uri in community_uris]
             and [
-                cached["items"][str(uri)]["description"]
+                cached["items"][str(uri)].get("semantic_description")
                 for uri in community_uris
                 if str(uri) in cached.get("items", {})
-            ] == descriptions
+            ] == semantic_descriptions
+            and [
+                cached["items"][str(uri)].get("structure_description")
+                for uri in community_uris
+                if str(uri) in cached.get("items", {})
+            ] == structure_descriptions
         ): # no change, just load embeddings from cache
             return cached
         else: # update it if raw descriptions are different
@@ -187,8 +247,6 @@ def _summary_embedding_similarity():
     descriptions = _extract_summary_txt()
 
     def write_to_cache():
-
-        model = SentenceTransformer("BAAI/bge-small-en-v1.5")
         embeddings = model.encode(descriptions)
         with SUMMARY_EMBEDDING_CACHE_PATH.open("wb") as f:
             pickle.dump(
@@ -259,8 +317,8 @@ def _levy_jump() -> URIRef | None:
         return None
     return _seed_random_comm(connected_communities)
 
-def _compare_similarity_at_walk(current_community):
-    model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
+    structure_weight = 1.0 - semantic_weight
 
     with (
         SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed,
@@ -273,11 +331,23 @@ def _compare_similarity_at_walk(current_community):
         embeddings = summaries["embeddings"]
 
         community = ontology["items"][str(current_community)]
-        community_embedding = community["embedding"]
+        semantic_embedding = community["semantic_embedding"]
+        structure_embedding = community["structure_embedding"]
         for description, embedding in zip(descriptions, embeddings):
-            
-            score = model.similarity(embedding, community_embedding)
-            print(f"{score} <-- {community["description"]} VS {description}")
+            semantic_score = model.similarity(embedding, semantic_embedding).item()
+            structure_score = model.similarity(embedding, structure_embedding).item()
+            final_score = (
+                semantic_weight * semantic_score
+                + structure_weight * structure_score
+            )
+            print(
+                f"semantic={semantic_score:.4f} "
+                f"structure={structure_score:.4f} "
+                f"final={final_score:.4f}\n"
+                f"Semantic text: {community['semantic_description']}\n"
+                f"Structure text: {community['structure_description']}\n"
+                f"Summary text: {description}\n"
+            )
 
 
 def walk(trial_count=5, steps_per_trial=10):
@@ -294,16 +364,15 @@ def walk(trial_count=5, steps_per_trial=10):
 
         print(f"\nTrial {trial} start: {current_community}")
 
-
-        # code here
-
-
         for step in range(1, steps_per_trial + 1):
             walk_name, walk_function, _ = RNG.choices(
                 walk_options,
                 weights=[weight for _, _, weight in walk_options],
                 k=1,
             )[0]
+
+            _compare_similarity_at_walk(current_community=current_community)
+
 
             if walk_name == "levy jump":
                 next_community = walk_function()
@@ -325,20 +394,39 @@ def walk(trial_count=5, steps_per_trial=10):
     
 if __name__ == "__main__":
     start = time.time()
-
     # _ontology_embedding_similarity()
     # _summary_embedding_similarity()
 
     # concept_class = URIRef("http://example.org/3dui-ontology#Task")
     # print(_adjacent_walk(concept_class))
 
-    # walk(trial_count=3, steps_per_trial=10)
+    walk(trial_count=3, steps_per_trial=10)
     # cache["items"][str(EX.TravelTechnique)]["embedding"]
 
-    _compare_similarity_at_walk(EX.TravelTechnique)
+    # _compare_similarity_at_walk(EX.TravelTechnique)
 
     end = time.time()
     print(f"Finished in: {end - start}")
+
+"""
+07/10/26: for the community embeddings, do not embed 
+
+Community: Task
+Label: Task
+Comment: A unit of work that a user seeks to accomplish within a 3D user interface.
+Subclass of: Domain Concept
+Relation: Task | owl:disjointWith | Design Principle
+Relation: Task | owl:disjointWith | Evaluation Method
+Relation: Task | owl:disjointWith | UI Component
+Relation: Task | rdf:type | owl:Class VS A unit of work that can involve practical warehouse optimization using virtual reality
+
+it's metadata dilution
+
+CHANGE TO: 
+Task. A unit of work that a user seeks to accomplish within a 3D user interface.
+
+the relations are useful but it answers "where does this class sit in the ontology. They should be scored separately?
+"""
 
 # after these runs, use LLMs to look into hotspots
 # split summary into two files (one for hierarchal reconstruction and one for additional evidence?)
