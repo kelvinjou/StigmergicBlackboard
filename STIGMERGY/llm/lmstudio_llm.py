@@ -1,3 +1,4 @@
+import json
 import os
 from urllib.parse import urlsplit, urlunsplit
 
@@ -31,6 +32,19 @@ def create_client():
 client = create_client()
 
 
+def _format_relation_judgment(content):
+    data = json.loads(content)
+    subject = data["subject"].strip()
+    predicate = data["predicate"].strip()
+    object_ = data["object"].strip()
+    reason = data["reason"].strip()
+
+    if not all((subject, predicate, object_, reason)):
+        raise ValueError(f"Incomplete relation judgment: {content!r}")
+
+    return f"({subject} {predicate} {object_}) - {reason}"
+
+
 class LMStudioLLM:
     def __init__(self):
         self.client = client
@@ -51,16 +65,49 @@ class LMStudioLLM:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=self.messages,
-            temperature=0,
-            max_tokens=60,
+            temperature=1.0,
+            max_tokens=500,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "relation_judgment",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "subject": {
+                                "type": "string",
+                            },
+                            "predicate": {
+                                "type": "string",
+                                "enum": [
+                                    "supports",
+                                    "contradicts",
+                                    "requires",
+                                    "causes",
+                                    "is unrelated to",
+                                ],
+                            },
+                            "object": {
+                                "type": "string",
+                            },
+                            "reason": {
+                                "type": "string",
+                            },
+                        },
+                        "required": ["subject", "predicate", "object", "reason"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
         )
+
         content = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": content})
         if response.usage:
             self.prompt_tokens += response.usage.prompt_tokens or 0
             self.completion_tokens += response.usage.completion_tokens or 0
             self.total_tokens += response.usage.total_tokens or 0
-        return content
+        return _format_relation_judgment(content)
 
 
 if __name__ == "__main__":

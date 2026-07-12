@@ -68,10 +68,13 @@ def _generate_llm_relational_description(ontology, evidence):
             f"""
                 Evidence 1: {ontology}
                 Evidence 2: {evidence}
+
+                Return only valid JSON matching the system schema.
             """
         )
         return response
-    except (APIConnectionError, APIStatusError) as error:
+
+    except (APIConnectionError, APIStatusError, ValueError) as error:
         print(f"Skipping LLM blurb: {error}")
         return None
 

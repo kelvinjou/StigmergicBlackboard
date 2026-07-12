@@ -3,6 +3,8 @@ import json
 
 def _load_blackboard_items(blackboard_path):
     if not blackboard_path.exists():
+        blackboard_path.parent.mkdir(parents=True, exist_ok=True)
+        blackboard_path.touch()
         return {}
 
     items = {}
