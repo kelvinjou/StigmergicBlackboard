@@ -38,25 +38,29 @@ EX = Namespace("http://example.org/3dui-ontology#")
 
 def _append_blackboard_blurb(community_id, community, final_score, evidence, blurb):
     blackboard_items = _load_blackboard_items(BLACKBOARD)
+    
+    # apply decay to all communities in blackboard
+    decay = 0.95
+    for item in blackboard_items.values():
+        item["strength"] *= decay
 
     if community_id not in blackboard_items:
         blackboard_items[community_id] = {
             "id": str(uuid.uuid4()),
             "community_id": community_id,
             "community": community["semantic_description"],
-            "conf": final_score,
+            "strength": 0.0,
             "blurb": [],
         }
 
-    blackboard_items[community_id]["conf"] = max(
-        blackboard_items[community_id]["conf"],
-        final_score,
-    )
+    # add reinforcement to visited community
+    blackboard_items[community_id]["strength"] += final_score
+
     blackboard_items[community_id]["blurb"].append(
         {
             "evidence": evidence,
             "text": blurb,
-            "conf": final_score,
+            "strength": final_score,
         }
     )
     _write_blackboard_items(BLACKBOARD, blackboard_items)
