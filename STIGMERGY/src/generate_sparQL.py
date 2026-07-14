@@ -10,9 +10,19 @@
 from pathlib import Path
 import json
 import heapq
+import re
+import sys
 
-BLACKBOARD_PATH = Path("_raw_outputs/blackboard.jsonl")
-SPARQL_SYSTEM_PROMPT_PATH = Path("llm/sparQL_generation_sys_prompt.md")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from llm.lmstudio_llm import LMStudioLLM
+
+BLACKBOARD_PATH = PROJECT_ROOT / "_raw_outputs/blackboard.jsonl"
+SPARQL_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "llm/sparQL_generation_sys_prompt.md"
+SPARQL_FENCE_PATTERN = re.compile(r"(?is)```sparql\s*(.*?)\s*```")
+PREFIX_PATTERN = re.compile(r"(?im)^\s*PREFIX\s+\w+:\s*<[^>]+>\s*$")
+INSERT_PATTERN = re.compile(r"(?i)INSERT\s+DATA\s*\{")
 
 # apply minimum strength filtering then get top K
 def strongest_communities(minimum: int, k: int) -> list[dict]:
@@ -32,8 +42,8 @@ def strongest_communities(minimum: int, k: int) -> list[dict]:
             key=lambda record: record["strength"],
         )
     
-# a blank new LLM call per K community?
-def retrieve_blurbs(communities: list[dict]):
+# a blank new LLM call per K community, and return SparQL command string
+def retrieve_blurbs(communities: list[dict]) -> str:
     system_prompt = SPARQL_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
 
     # a fancier way of "append every "text"" in list(community[blurb])"
@@ -42,8 +52,6 @@ def retrieve_blurbs(communities: list[dict]):
         for community in communities
         for blurb in community["blurb"]
     ]
-
-
     community_context = [
         {
             "uri": community["community_id"],
@@ -53,28 +61,68 @@ def retrieve_blurbs(communities: list[dict]):
         for community in communities
     ]
 
-    user_prompt = json.dumps(
-        {
-            "communities": community_context,
-            "evidence": text_evidence,
-        },
-        ensure_ascii=True,
-        indent=2,
+    agent = LMStudioLLM(
+        system_prompt=system_prompt,
+        response_format=False,
+        formatter=None,
+    )
+    response = agent.send_messages(
+        json.dumps(
+            {
+                "communities": community_context,
+                "evidence": text_evidence,
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        max_tokens=1500,
+        temperature=0.0,
     )
 
-    return [
-        {
-            "role": "system",
-            "content": system_prompt,
-        },
-        {
-            "role": "user",
-            "content": user_prompt,
-        },
-    ]
+    return _format_sparql_response(response)
+
+
+def _format_sparql_response(response: str) -> str:
+    return f"```sparql\n{_extract_sparql_update(response)}\n```"
+
+
+def _extract_sparql_update(response: str) -> str:
+    fence_match = SPARQL_FENCE_PATTERN.search(response)
+    if fence_match:
+        response = fence_match.group(1)
+
+    prefixes = [match.group(0).strip() for match in PREFIX_PATTERN.finditer(response)]
+    insert_block = _extract_insert_data_block(response)
+    if not insert_block:
+        return "INSERT DATA { }"
+
+    sparql = "\n".join([*dict.fromkeys(prefixes), "", insert_block]).strip()
+    return re.sub(r"<(ex:[^>]+)>", r"\1", sparql)
+
+
+def _extract_insert_data_block(text: str) -> str | None:
+    match = INSERT_PATTERN.search(text)
+    if not match:
+        return None
+
+    start = match.start()
+    brace_start = text.find("{", match.end() - 1)
+    if brace_start == -1:
+        return None
+
+    depth = 0
+    for index in range(brace_start, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index + 1].strip()
+    return None
         
 
 
 if __name__ == "__main__":
-    communities = strongest_communities(minimum=2, k=1)
-    retrieve_blurbs(communities=communities)
+    communities = strongest_communities(minimum=2, k=3)
+    print(retrieve_blurbs(communities=communities))
