@@ -1,6 +1,8 @@
+from contextlib import contextmanager
 import json
 from pathlib import Path
 import sys
+from time import perf_counter
 
 from rdflib import Graph
 
@@ -9,6 +11,7 @@ from src.generate_sparQL import (
     retrieve_blurbs,
     strongest_communities,
 )
+from src.preprocessing import MAIN_ONTOLOGY
 
 
 def _load_blackboard_items(blackboard_path):
@@ -57,14 +60,25 @@ def _generate_sparQL():
         communities = strongest_communities(minimum=2, k=3)
         sparql_command = retrieve_blurbs(communities=communities)
         _execute_sparQL_command(
-            ttl_path="_raw_inputs/simplified_xr.ttl",
+            ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
             command=sparql_command
         )
+
+        print(f"SPARQL commands:\n {sparql_command}")
 
     elif user_input == "n":
         raise SystemExit(0)
     else:
         raise RuntimeError("Please enter 'y' or 'n'.")
+    
+@contextmanager
+def timed_stage(name: str):
+    start = perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = perf_counter() - start
+        print(f"{name} finished in {elapsed:.2f}s")
 
 if __name__ == "__main__":
     _execute_sparQL_command(

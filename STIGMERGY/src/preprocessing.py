@@ -8,12 +8,13 @@ from sentence_transformers import SentenceTransformer
 import hnswlib
 import numpy as np
 
+MAIN_ONTOLOGY = Path("_raw_inputs/enhanced_xr.ttl")
+SUMMARY = Path("_raw_inputs/summary_for_xr_enhanced.txt")
 
 ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
 ONTOLOGY_HNSW_INDEX_PATH = Path("_preprocessed/community_hnsw.bin")
 SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
-MAIN_ONTOLOGY = Path("_raw_inputs/simplified_xr.ttl")
-SUMMARY = Path("_raw_inputs/summary.txt")
+
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 @cache
