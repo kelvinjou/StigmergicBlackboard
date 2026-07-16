@@ -1,17 +1,24 @@
+from functools import cache
 from pathlib import Path
 import pickle
 
 from rdflib import Graph, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
 from sentence_transformers import SentenceTransformer
+import hnswlib
+import numpy as np
 
 
 ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
+ONTOLOGY_HNSW_INDEX_PATH = Path("_preprocessed/community_hnsw.bin")
 SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
 MAIN_ONTOLOGY = Path("_raw_inputs/simplified_xr.ttl")
 SUMMARY = Path("_raw_inputs/summary.txt")
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
-model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+@cache
+def get_embedding_model() -> SentenceTransformer:
+    return SentenceTransformer(EMBEDDING_MODEL_NAME)
 
 
 """ creates embeddings of each community in the main ontology
@@ -116,12 +123,23 @@ def _ontology_embedding_similarity():
         _extract_TTL_community_context()
     )
 
-    def write_to_cache():
-        from sentence_transformers import SentenceTransformer
+    def write_hnsw_index(semantic_embeddings):
+        ONTOLOGY_HNSW_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-        model = SentenceTransformer("BAAI/bge-small-en-v1.5")
-        semantic_embeddings = model.encode(semantic_descriptions)
-        structure_embeddings = model.encode(structure_descriptions)
+        # HNSW takes semantic embeddings for now.
+        index = hnswlib.Index(space="cosine", dim=semantic_embeddings.shape[1])
+        index.init_index(
+            max_elements=len(semantic_embeddings),  # Maximum vectors the index can hold
+            ef_construction=200,           # Thoroughness during graph construction, number of candidates HNSW considers
+            M=16,                          # Connections per node
+        )
+        index.add_items(semantic_embeddings, list(range(len(semantic_embeddings))))
+        index.save_index(str(ONTOLOGY_HNSW_INDEX_PATH))
+
+    def write_to_cache():
+        semantic_embeddings = get_embedding_model().encode(semantic_descriptions)
+        structure_embeddings = get_embedding_model().encode(structure_descriptions)
+        write_hnsw_index(semantic_embeddings)
 
         items = {
             str(uri): {
@@ -162,11 +180,12 @@ def _ontology_embedding_similarity():
         }
         """
         cache = {
-            "model": "BAAI/bge-small-en-v1.5",
+            "model": EMBEDDING_MODEL_NAME,
             "uris": [str(uri) for uri in community_uris],
             "items": items,
         }
 
+        ONTOLOGY_EMBEDDING_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         with ONTOLOGY_EMBEDDING_CACHE_PATH.open("wb") as f:
             pickle.dump(cache, f)
         return cache
@@ -187,6 +206,14 @@ def _ontology_embedding_similarity():
                 if str(uri) in cached.get("items", {})
             ] == structure_descriptions
         ): # no change, just load embeddings from cache
+            if not ONTOLOGY_HNSW_INDEX_PATH.exists():
+                semantic_embeddings = np.array(
+                    [
+                        cached["items"][str(uri)]["semantic_embedding"]
+                        for uri in community_uris
+                    ]
+                )
+                write_hnsw_index(semantic_embeddings)
             return cached
         else: # update it if raw descriptions are different
             return write_to_cache()
@@ -221,7 +248,7 @@ def _summary_embedding_similarity():
     descriptions = _extract_summary_txt()
 
     def write_to_cache():
-        embeddings = model.encode(descriptions)
+        embeddings = get_embedding_model().encode(descriptions)
         with SUMMARY_EMBEDDING_CACHE_PATH.open("wb") as f:
             pickle.dump(
                 {

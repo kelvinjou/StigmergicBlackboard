@@ -22,7 +22,7 @@ from src.preprocessing import (
     SUMMARY_EMBEDDING_CACHE_PATH,
     _ontology_embedding_similarity,
     _summary_embedding_similarity,
-    model,
+    get_embedding_model,
 )
 from src.walk_strategies import (
     RNG,
@@ -82,58 +82,58 @@ def _generate_llm_relational_description(ontology, evidence):
         print(f"Skipping LLM blurb: {error}")
         return None
 
-def _compare_similarity_at_walk(current_community, semantic_weight=0.85):
+def _compare_similarity_at_walk(
+    current_community,
+    evidence_text,
+    evidence_embedding,
+    semantic_weight=0.85,
+):
     structure_weight = 1.0 - semantic_weight
 
-    with (
-        SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed,
-        ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as ont_embed,
-    ):
-        summaries = pickle.load(sum_embed)
+    with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as ont_embed:
         ontology = pickle.load(ont_embed)
-
-        descriptions = summaries["descriptions"]
-        embeddings = summaries["embeddings"]
 
         community = ontology["items"][str(current_community)]
         semantic_embedding = community["semantic_embedding"]
         structure_embedding = community["structure_embedding"]
-        for description, embedding in zip(descriptions, embeddings):
-            semantic_score = model.similarity(embedding, semantic_embedding).item()
-            structure_score = model.similarity(embedding, structure_embedding).item()
-            final_score = (
-                semantic_weight * semantic_score
-                + structure_weight * structure_score
+
+        semantic_score = get_embedding_model().similarity(evidence_embedding, semantic_embedding).item()
+        structure_score = get_embedding_model().similarity(evidence_embedding, structure_embedding).item()
+        final_score = (
+            semantic_weight * semantic_score
+            + structure_weight * structure_score
+        )
+        print(
+            f"semantic={semantic_score:.4f} "
+            f"structure={structure_score:.4f} "
+            f"final={final_score:.4f}\n"
+            f"Semantic text: {community['semantic_description']}\n"
+            f"Structure text: {community['structure_description']}\n"
+            f"Summary text: {evidence_text}\n"
+        )
+        
+        if final_score > 0.6:
+            ontology = f"""
+                Semantic text: {community['semantic_description']}
+                Structure text: {community['structure_description']}
+            """
+            blurb = _generate_llm_relational_description(ontology=ontology, evidence=evidence_text)
+            if blurb is None:
+                print("Something went wrong? Perchance")
+                return
+                
+
+            _append_blackboard_blurb(
+                community_id=str(current_community),
+                community=community,
+                final_score=final_score,
+                evidence=evidence_text,
+                blurb=blurb,
             )
-            print(
-                f"semantic={semantic_score:.4f} "
-                f"structure={structure_score:.4f} "
-                f"final={final_score:.4f}\n"
-                f"Semantic text: {community['semantic_description']}\n"
-                f"Structure text: {community['structure_description']}\n"
-                f"Summary text: {description}\n"
-            )
-            
-            if final_score > 0.6:
-                ontology = f"""
-                    Semantic text: {community['semantic_description']}
-                    Structure text: {community['structure_description']}
-                """
-                blurb = _generate_llm_relational_description(ontology=ontology, evidence=description)
-                if blurb is None:
-                    print("Something went wrong? Perchance")
-                    continue
-
-                _append_blackboard_blurb(
-                    community_id=str(current_community),
-                    community=community,
-                    final_score=final_score,
-                    evidence=description,
-                    blurb=blurb,
-                )
 
 
-# Random-walk orchestration.
+# Random-walk orchestration. 
+# walk now owns the evidence loop
 def walk(trial_count=5, steps_per_trial=10):
     walk_options = [
         ("top down", _direct_child_walk, 0.6),
@@ -141,40 +141,54 @@ def walk(trial_count=5, steps_per_trial=10):
         ("levy jump", _levy_jump, 0.1),
     ]
 
-    for trial in range(1, trial_count + 1):
-        current_community = _starting_community()
-        if current_community is None:
-            return
 
-        print(f"\nTrial {trial} start: {current_community}")
+    with (
+        SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed
+    ):
+        summaries = pickle.load(sum_embed)
+        for evidence_text, evidence_embedding in zip(
+            summaries["descriptions"],
+            summaries["embeddings"]
+        ):
+            for trial in range(1, trial_count + 1):
+                # current_community = _starting_community()
+                current_community = _starting_community(evidence_embedding)
+                if current_community is None:
+                    return
 
-        for step in range(1, steps_per_trial + 1):
-            walk_name, walk_function, _ = RNG.choices(
-                walk_options,
-                weights=[weight for _, _, weight in walk_options],
-                k=1,
-            )[0]
-            # per community is here
-            _compare_similarity_at_walk(current_community=current_community)
+                print(f"\nTrial {trial} start: {current_community}")
+
+                for step in range(1, steps_per_trial + 1):
+                    walk_name, walk_function, _ = RNG.choices(
+                        walk_options,
+                        weights=[weight for _, _, weight in walk_options],
+                        k=1,
+                    )[0]
+                    # per community is here
+                    _compare_similarity_at_walk(
+                        current_community=current_community,
+                        evidence_text=evidence_text,
+                        evidence_embedding=evidence_embedding,
+                    )
 
 
-            if walk_name == "levy jump":
-                next_community = walk_function()
-            else:
-                next_community = walk_function(current_community)
+                    if walk_name == "levy jump":
+                        next_community = walk_function()
+                    else:
+                        next_community = walk_function(current_community)
 
-            if next_community is None:
-                print(
-                    f"Trial {trial}, step {step}: {walk_name} from "
-                    f"{current_community} -> no available move"
-                )
-                continue
+                    if next_community is None:
+                        print(
+                            f"Trial {trial}, step {step}: {walk_name} from "
+                            f"{current_community} -> no available move"
+                        )
+                        continue
 
-            print(
-                f"Trial {trial}, step {step}: {walk_name} from "
-                f"{current_community} -> {next_community}"
-            )
-            current_community = next_community
+                    print(
+                        f"Trial {trial}, step {step}: {walk_name} from "
+                        f"{current_community} -> {next_community}"
+                    )
+                    current_community = next_community
     
 if __name__ == "__main__":
     start = time.time()
