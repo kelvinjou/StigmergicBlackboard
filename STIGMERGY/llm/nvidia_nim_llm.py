@@ -1,15 +1,21 @@
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+from pathlib import Path
+
+from llm.lmstudio_llm import _resolve_system_prompt
+
+
+DEFAULT_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts/system_prompt.md"
 
 class NvidiaNIMLLM:
-    def __init__(self):
+    def __init__(self, system_prompt_path):
         load_dotenv()
 
         self.client = OpenAI(api_key=os.getenv("NVIDIA_API_KEY"),
                              base_url="https://integrate.api.nvidia.com/v1"
         )
-        self.system_msg = open("llm/system_prompt.md", "r").read()
+        self.system_prompt = _resolve_system_prompt(system_prompt_path)
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.total_tokens = 0
@@ -17,7 +23,7 @@ class NvidiaNIMLLM:
         self.messages.append(
             {
                 "role": "system",
-                "content": self.system_msg
+                "content": self.system_prompt
             }
         )
 
@@ -37,7 +43,9 @@ class NvidiaNIMLLM:
     
 
 if __name__ == "__main__":
-    agent = NvidiaNIMLLM()
+    agent = NvidiaNIMLLM(
+        system_prompt_path=DEFAULT_SYSTEM_PROMPT_PATH
+    )
     message = "Write a 10 word joke"
     response = agent.send_messages(message)
     print(response)

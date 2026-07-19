@@ -19,7 +19,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from llm.lmstudio_llm import LMStudioLLM
 
 BLACKBOARD_PATH = PROJECT_ROOT / "_raw_outputs/blackboard.jsonl"
-SPARQL_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "llm/sparQL_generation_sys_prompt.md"
+SPARQL_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "llm/prompts/sparQL_generation_sys_prompt.md"
 SPARQL_FENCE_PATTERN = re.compile(r"(?is)```sparql\s*(.*?)\s*```")
 PREFIX_PATTERN = re.compile(r"(?im)^\s*PREFIX\s+\w+:\s*<[^>]+>\s*$")
 INSERT_PATTERN = re.compile(r"(?i)INSERT\s+DATA\s*\{")
@@ -44,8 +44,6 @@ def strongest_communities(minimum: int, k: int) -> list[dict]:
     
 # a blank new LLM call per K community, and return SparQL command string
 def retrieve_blurbs(communities: list[dict]) -> str:
-    system_prompt = SPARQL_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
-
     # a fancier way of "append every "text"" in list(community[blurb])"
     text_evidence = [
         blurb["text"]
@@ -62,7 +60,7 @@ def retrieve_blurbs(communities: list[dict]) -> str:
     ]
 
     agent = LMStudioLLM(
-        system_prompt=system_prompt,
+        system_prompt_path=SPARQL_SYSTEM_PROMPT_PATH,
         response_format=False,
         formatter=None,
     )

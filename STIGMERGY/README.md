@@ -20,4 +20,7 @@ STIGMERGY/
 └── llm/
     ├── lmstudio_llm.py
     ├── nvidia_nim_llm.py
-    └── system_prompt.md
+    └── prompts/
+        ├── baseline_sys_prompt.md
+        ├── sparQL_generation_sys_prompt.md
+        └── system_prompt.md

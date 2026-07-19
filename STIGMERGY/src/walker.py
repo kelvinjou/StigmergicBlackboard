@@ -36,31 +36,33 @@ BLACKBOARD = Path("_raw_outputs/blackboard.jsonl") # using jsonl b/c this file i
 
 EX = Namespace("http://example.org/3dui-ontology#")
 
-def _append_blackboard_blurb(community_id, community, final_score, evidence, blurb):
+def _decay_blackboard_strengths(decay=0.95):
     blackboard_items = _load_blackboard_items(BLACKBOARD)
-    
-    # apply decay to all communities in blackboard
-    decay = 0.95
+
     for item in blackboard_items.values():
         item["strength"] *= decay
+    
+    _write_blackboard_items(BLACKBOARD, blackboard_items)
+
+
+def _append_blackboard_blurb(community_id, community, deposit_score, evidence, blurb):
+    blackboard_items = _load_blackboard_items(BLACKBOARD)
 
     if community_id not in blackboard_items:
         blackboard_items[community_id] = {
             "id": str(uuid.uuid4()),
             "community_id": community_id,
             "community": community["semantic_description"],
-            "strength": 0.0,
-            "blurb": [],
         }
 
     # add reinforcement to visited community
-    blackboard_items[community_id]["strength"] += final_score
+    blackboard_items[community_id]["strength"] += deposit_score
 
     blackboard_items[community_id]["blurb"].append(
         {
             "evidence": evidence,
             "text": blurb,
-            "strength": final_score,
+            "strength": deposit_score,
         }
     )
     _write_blackboard_items(BLACKBOARD, blackboard_items)
@@ -86,6 +88,7 @@ def _compare_similarity_at_walk(
     current_community,
     evidence_text,
     evidence_embedding,
+    path_confidence=1.0,
     semantic_weight=0.85,
 ):
     structure_weight = 1.0 - semantic_weight
@@ -103,10 +106,11 @@ def _compare_similarity_at_walk(
             semantic_weight * semantic_score
             + structure_weight * structure_score
         )
+        deposit_score = final_score * path_confidence
         print(
             f"semantic={semantic_score:.4f} "
             f"structure={structure_score:.4f} "
-            f"final={final_score:.4f}\n"
+            f"final={deposit_score:.4f}\n"
             f"Semantic text: {community['semantic_description']}\n"
             f"Structure text: {community['structure_description']}\n"
             f"Summary text: {evidence_text}\n"
@@ -126,7 +130,7 @@ def _compare_similarity_at_walk(
             _append_blackboard_blurb(
                 community_id=str(current_community),
                 community=community,
-                final_score=final_score,
+                deposit_score=deposit_score,
                 evidence=evidence_text,
                 blurb=blurb,
             )
@@ -151,6 +155,8 @@ def walk(trial_count=5, steps_per_trial=10):
             summaries["embeddings"]
         ):
             for trial in range(1, trial_count + 1):
+                _decay_blackboard_strengths()
+
                 # current_community = _starting_community()
                 current_community = _starting_community(evidence_embedding)
                 if current_community is None:
@@ -169,6 +175,7 @@ def walk(trial_count=5, steps_per_trial=10):
                         current_community=current_community,
                         evidence_text=evidence_text,
                         evidence_embedding=evidence_embedding,
+                        path_confidence=0.9 ** (step - 1)
                     )
 
 

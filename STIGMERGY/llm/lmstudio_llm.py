@@ -9,7 +9,7 @@ from openai import OpenAI
 
 load_dotenv()
 
-DEFAULT_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "system_prompt.md"
+DEFAULT_SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent / "prompts/system_prompt.md"
 
 
 def _lmstudio_openai_endpoint(endpoint):
@@ -73,7 +73,7 @@ RELATION_JUDGMENT_RESPONSE_FORMAT = {
                 },
                 "reason": {
                     "type": "string",
-                },
+               },
             },
             "required": ["subject", "predicate", "object", "reason"],
             "additionalProperties": False,
@@ -82,11 +82,13 @@ RELATION_JUDGMENT_RESPONSE_FORMAT = {
 }
 
 
-def _resolve_system_prompt(system_prompt):
-    if system_prompt is None:
+def _resolve_system_prompt(system_prompt_path: Path | None):
+    if system_prompt_path is None:
         return DEFAULT_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
 
-    prompt = str(system_prompt)
+    prompt = system_prompt_path.read_text(encoding="utf-8")
+
+    # potentially not needed
     if "\n" not in prompt:
         path = Path(prompt)
         if path.exists():
@@ -97,13 +99,13 @@ def _resolve_system_prompt(system_prompt):
 class LMStudioLLM:
     def __init__(
         self,
-        system_prompt=None,
+        system_prompt_path: Path | None = None,
         response_format=None,
         formatter=_format_relation_judgment,
     ):
         self.client = client
         self.model = os.getenv("LMSTUDIO_MODEL")
-        self.system_msg = _resolve_system_prompt(system_prompt)
+        self.system_msg = _resolve_system_prompt(system_prompt_path)
         self.response_format = (
             RELATION_JUDGMENT_RESPONSE_FORMAT
             if response_format is None
@@ -145,6 +147,6 @@ class LMStudioLLM:
 
 
 if __name__ == "__main__":
-    agent = LMStudioLLM(system_prompt="llm/system_prompt.md")
+    agent = LMStudioLLM(system_prompt_path=DEFAULT_SYSTEM_PROMPT_PATH)
     response = agent.send_messages("Write a 10 word joke")
     print(response)
