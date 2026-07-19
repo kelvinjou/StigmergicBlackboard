@@ -16,6 +16,7 @@ from openai import APIConnectionError, APIStatusError
 from rdflib import Namespace
 
 from llm.lmstudio_llm import LMStudioLLM
+from src import config
 from src.helper import _load_blackboard_items, _write_blackboard_items
 from src.preprocessing import (
     ONTOLOGY_EMBEDDING_CACHE_PATH,
@@ -29,6 +30,7 @@ from src.walk_strategies import (
     _adjacent_walk,
     _direct_child_walk,
     _levy_jump,
+    _pheromone_biased_walk,
     _starting_community,
 )
 
@@ -36,16 +38,35 @@ BLACKBOARD = Path("_raw_outputs/blackboard.jsonl") # using jsonl b/c this file i
 
 EX = Namespace("http://example.org/3dui-ontology#")
 
-def _decay_blackboard_strengths(decay=0.95):
+def _decay_blackboard_strengths(decay=None):
+    """Evaporate pheromone (tau) once per trial: tau <- (1 - rho) * tau."""
+    if decay is None:
+        decay = 1.0 - config.EVAPORATION_RATE
     blackboard_items = _load_blackboard_items(BLACKBOARD)
 
     for item in blackboard_items.values():
         item["strength"] *= decay
-    
+
     _write_blackboard_items(BLACKBOARD, blackboard_items)
 
 
-def _append_blackboard_blurb(community_id, community, deposit_score, evidence, blurb):
+def _blackboard_strengths() -> dict[str, float]:
+    """{community_id: tau} snapshot the walk reads to bias the next step."""
+    return {
+        community_id: item.get("strength", 0.0)
+        for community_id, item in _load_blackboard_items(BLACKBOARD).items()
+    }
+
+
+def _append_blackboard_blurb(community_id, community, heuristic, path_confidence, evidence, blurb):
+    """Deposit pheromone and record the blurb.
+
+    tau (item["strength"]) is the LEARNED pheromone. It is deliberately NOT the
+    raw embedding score: the deposit uses diminishing returns per
+    (evidence, community) pair so repeated identical landings saturate, while
+    accumulation ACROSS different evidence stays the real signal. eta (the raw
+    embedding score) is kept per-blurb under "heuristic".
+    """
     blackboard_items = _load_blackboard_items(BLACKBOARD)
 
     if community_id not in blackboard_items:
@@ -53,16 +74,32 @@ def _append_blackboard_blurb(community_id, community, deposit_score, evidence, b
             "id": str(uuid.uuid4()),
             "community_id": community_id,
             "community": community["semantic_description"],
+            "strength": 0.0,
+            "visits": {},
+            "blurb": [],
         }
 
-    # add reinforcement to visited community
-    blackboard_items[community_id]["strength"] += deposit_score
+    item = blackboard_items[community_id]
 
-    blackboard_items[community_id]["blurb"].append(
+    # base deposit: relevance-weighted (eta) or a constant per visit
+    if config.DEPOSIT_MODE == "constant":
+        base = config.CONSTANT_DEPOSIT_Q * path_confidence
+    else:
+        base = heuristic * path_confidence
+
+    # diminishing returns for repeated (evidence, community) landings
+    prior_visits = item["visits"].get(evidence, 0)
+    deposit = base * (config.DIMINISHING_RETURNS ** prior_visits)
+    item["visits"][evidence] = prior_visits + 1
+
+    item["strength"] += deposit
+
+    item["blurb"].append(
         {
             "evidence": evidence,
             "text": blurb,
-            "strength": deposit_score,
+            "heuristic": heuristic,
+            "deposit": deposit,
         }
     )
     _write_blackboard_items(BLACKBOARD, blackboard_items)
@@ -89,8 +126,10 @@ def _compare_similarity_at_walk(
     evidence_text,
     evidence_embedding,
     path_confidence=1.0,
-    semantic_weight=0.85,
+    semantic_weight=None,
 ):
+    if semantic_weight is None:
+        semantic_weight = config.SEMANTIC_WEIGHT
     structure_weight = 1.0 - semantic_weight
 
     with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as ont_embed:
@@ -102,21 +141,21 @@ def _compare_similarity_at_walk(
 
         semantic_score = get_embedding_model().similarity(evidence_embedding, semantic_embedding).item()
         structure_score = get_embedding_model().similarity(evidence_embedding, structure_embedding).item()
-        final_score = (
+        # eta: heuristic desirability (static, per-evidence). NOT the pheromone.
+        heuristic = (
             semantic_weight * semantic_score
             + structure_weight * structure_score
         )
-        deposit_score = final_score * path_confidence
         print(
             f"semantic={semantic_score:.4f} "
             f"structure={structure_score:.4f} "
-            f"final={deposit_score:.4f}\n"
+            f"eta={heuristic:.4f} path_conf={path_confidence:.4f}\n"
             f"Semantic text: {community['semantic_description']}\n"
             f"Structure text: {community['structure_description']}\n"
             f"Summary text: {evidence_text}\n"
         )
-        
-        if final_score > 0.6:
+
+        if heuristic > config.BLURB_THRESHOLD:
             ontology = f"""
                 Semantic text: {community['semantic_description']}
                 Structure text: {community['structure_description']}
@@ -125,12 +164,13 @@ def _compare_similarity_at_walk(
             if blurb is None:
                 print("Something went wrong? Perchance")
                 return
-                
+
 
             _append_blackboard_blurb(
                 community_id=str(current_community),
                 community=community,
-                deposit_score=deposit_score,
+                heuristic=heuristic,
+                path_confidence=path_confidence,
                 evidence=evidence_text,
                 blurb=blurb,
             )
@@ -140,9 +180,9 @@ def _compare_similarity_at_walk(
 # walk now owns the evidence loop
 def walk(trial_count=5, steps_per_trial=10):
     walk_options = [
-        ("top down", _direct_child_walk, 0.6),
-        ("adjacent", _adjacent_walk, 0.3),
-        ("levy jump", _levy_jump, 0.1),
+        ("top down", _direct_child_walk, config.TOP_DOWN_WEIGHT),
+        ("adjacent", _adjacent_walk, config.ADJACENT_WEIGHT),
+        ("levy jump", _levy_jump, config.LEVY_WEIGHT),
     ]
 
 
@@ -165,24 +205,36 @@ def walk(trial_count=5, steps_per_trial=10):
                 print(f"\nTrial {trial} start: {current_community}")
 
                 for step in range(1, steps_per_trial + 1):
-                    walk_name, walk_function, _ = RNG.choices(
-                        walk_options,
-                        weights=[weight for _, _, weight in walk_options],
-                        k=1,
-                    )[0]
-                    # per community is here
+                    path_confidence = config.PATH_CONFIDENCE_DECAY ** (step - 1)
+                    # score (and possibly deposit on) the current community
                     _compare_similarity_at_walk(
                         current_community=current_community,
                         evidence_text=evidence_text,
                         evidence_embedding=evidence_embedding,
-                        path_confidence=0.9 ** (step - 1)
+                        path_confidence=path_confidence,
                     )
 
-
-                    if walk_name == "levy jump":
-                        next_community = walk_function()
+                    # choose the next community
+                    if config.PHEROMONE_BIAS_ENABLED:
+                        # closed loop: read tau off the blackboard, bias by
+                        # tau^ALPHA * eta^BETA
+                        walk_name = "pheromone-biased"
+                        next_community = _pheromone_biased_walk(
+                            current_community,
+                            evidence_embedding,
+                            _blackboard_strengths(),
+                        )
                     else:
-                        next_community = walk_function(current_community)
+                        # ablation: fixed-weight strategy + uniform-random node
+                        walk_name, walk_function, _ = RNG.choices(
+                            walk_options,
+                            weights=[weight for _, _, weight in walk_options],
+                            k=1,
+                        )[0]
+                        if walk_name == "levy jump":
+                            next_community = walk_function()
+                        else:
+                            next_community = walk_function(current_community)
 
                     if next_community is None:
                         print(
@@ -196,6 +248,14 @@ def walk(trial_count=5, steps_per_trial=10):
                         f"{current_community} -> {next_community}"
                     )
                     current_community = next_community
+
+                # score the final landing (previously never scored)
+                _compare_similarity_at_walk(
+                    current_community=current_community,
+                    evidence_text=evidence_text,
+                    evidence_embedding=evidence_embedding,
+                    path_confidence=config.PATH_CONFIDENCE_DECAY ** steps_per_trial,
+                )
     
 if __name__ == "__main__":
     start = time.time()
