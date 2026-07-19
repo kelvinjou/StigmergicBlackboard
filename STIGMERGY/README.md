@@ -1,3 +1,4 @@
+```
 STIGMERGY/
 ├── walker.py
 │   └── small compatibility entrypoint that calls src.walker.walk()
@@ -24,3 +25,4 @@ STIGMERGY/
         ├── baseline_sys_prompt.md
         ├── sparQL_generation_sys_prompt.md
         └── system_prompt.md
+```
