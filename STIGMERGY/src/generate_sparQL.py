@@ -77,7 +77,7 @@ def retrieve_blurbs(communities: list[dict]) -> str:
         temperature=0.0,
     )
 
-    print(f"RAW RESPONSE: {response}")
+    # print(f"RAW RESPONSE: {response}")
 
     return _format_sparql_response(response)
 
