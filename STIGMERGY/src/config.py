@@ -68,3 +68,7 @@ SEMANTIC_WEIGHT = 0.85
 
 # --- Path confidence decay per step within a trial --------------------------
 PATH_CONFIDENCE_DECAY = 0.9
+
+# --- Generate sparQL iif computed pheromone strength is above x value
+# set it to 0.0 for debugging (generate a sparQL for all)
+PHEROMONE_SPARQL_GENERATION_MINIMUM = 0.0

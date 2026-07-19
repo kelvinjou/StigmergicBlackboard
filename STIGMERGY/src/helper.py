@@ -6,6 +6,7 @@ from time import perf_counter
 
 from rdflib import Graph
 
+from src.config import PHEROMONE_SPARQL_GENERATION_MINIMUM
 from src.generate_sparQL import (
     _extract_sparql_update,
     retrieve_blurbs,
@@ -57,7 +58,7 @@ def _generate_sparQL():
     user_input = user_input.strip().lower()
 
     if user_input == "y":
-        communities = strongest_communities(minimum=2, k=3)
+        communities = strongest_communities(minimum=PHEROMONE_SPARQL_GENERATION_MINIMUM, k=3)
         sparql_command = retrieve_blurbs(communities=communities)
         _execute_sparQL_command(
             ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
