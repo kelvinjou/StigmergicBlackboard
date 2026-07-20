@@ -1,0 +1,41 @@
+# Minimal self-contained ontology mirroring the real enhanced_xr.ttl structure.
+# Used by tests so they do not depend on the (uncommitted) _raw_inputs ontology.
+@prefix : <http://example.org/3dui-ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+:Concept a owl:Class .
+
+:HardwareComponent a owl:Class ;
+    rdfs:subClassOf :Concept .
+:InteractionTechnique a owl:Class ;
+    rdfs:subClassOf :Concept .
+:HumanFactor a owl:Class ;
+    rdfs:subClassOf :Concept .
+:Task a owl:Class ;
+    rdfs:subClassOf :Concept .
+
+:HardwareComponent owl:disjointWith :InteractionTechnique ,
+        :HumanFactor .
+:InteractionTechnique owl:disjointWith :HumanFactor .
+
+:InputDevice a owl:Class ;
+    rdfs:subClassOf :HardwareComponent .
+:PassiveInputDevice a owl:Class ;
+    rdfs:subClassOf :InputDevice .
+:TrackingSystem a owl:Class ;
+    rdfs:subClassOf :HardwareComponent .
+:OpticalTracker a owl:Class ;
+    rdfs:subClassOf :TrackingSystem .
+:TravelTechnique a owl:Class ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:usesHardware a owl:ObjectProperty ;
+    rdfs:domain :InteractionTechnique ;
+    rdfs:range :HardwareComponent .
+:supportsTask a owl:ObjectProperty ;
+    rdfs:domain :InteractionTechnique ;
+    rdfs:range :Task .
+:causes a owl:ObjectProperty ;
+    rdfs:domain :Concept .
