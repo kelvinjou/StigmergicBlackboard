@@ -136,7 +136,7 @@ def _new_evidence_ontology_persistence():
     # each run should use its own summary.txt, enhanced_xr.ttl
     # for each run, create a copy of the embedding if it doesn't exist yet
     # add the new embedding to pkl, add the new HNSW
-
+    # do not persist blackboard across different evidence rows (the scores correspond to different evidence)
     pass
     
 @contextmanager

@@ -34,7 +34,8 @@ from src.walk_strategies import (
     _starting_community,
 )
 
-BLACKBOARD = Path("_raw_outputs/blackboard.jsonl") # using jsonl b/c this file is continuously being updated. If using JSON, you must load the whole thing
+COUNTER = 1
+BLACKBOARD = Path(f"_raw_outputs/bb{COUNTER}.jsonl") # using jsonl b/c this file is continuously being updated. If using JSON, you must load the whole thing
 
 EX = Namespace("http://example.org/3dui-ontology#")
 
@@ -179,6 +180,8 @@ def _compare_similarity_at_walk(
 # Random-walk orchestration. 
 # walk now owns the evidence loop
 def walk(trial_count=5, steps_per_trial=10):
+    global COUNTER, BLACKBOARD
+
     walk_options = [
         ("top down", _direct_child_walk, config.TOP_DOWN_WEIGHT),
         ("adjacent", _adjacent_walk, config.ADJACENT_WEIGHT),
@@ -256,6 +259,9 @@ def walk(trial_count=5, steps_per_trial=10):
                     evidence_embedding=evidence_embedding,
                     path_confidence=config.PATH_CONFIDENCE_DECAY ** steps_per_trial,
                 )
+
+            # incrementing count so that each evidence starts off with unique blackboard
+            COUNTER += 1
     
 if __name__ == "__main__":
     start = time.time()
