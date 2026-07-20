@@ -7,7 +7,7 @@ from time import perf_counter
 from rdflib import Graph
 from rdflib.namespace import OWL, RDFS
 
-from src.config import PHEROMONE_SPARQL_GENERATION_MINIMUM
+from src.config import NEW_EVIDENCE_PERSISTENCE, PHEROMONE_SPARQL_GENERATION_MINIMUM
 from src.generate_sparQL import (
     _extract_sparql_update,
     retrieve_blurbs,
@@ -76,7 +76,14 @@ def _execute_sparQL_command(
     output_path="_raw_outputs/modified_simplified_xr.ttl",
 ):
     g = Graph()
-    g.parse(ttl_path, format="ttl")
+    output_path = Path(output_path)
+
+    if NEW_EVIDENCE_PERSISTENCE and output_path.exists():
+        g.parse(output_path, format="ttl")
+        # update community embedding and also HNSW 
+
+    else:
+        g.parse(ttl_path, format="ttl")
     # Snapshot pre-existing violations so the guard only rejects NEW ones the
     # update introduces, never inconsistencies already baked into the ontology.
     before = _disjointness_violations(g)
@@ -95,8 +102,9 @@ def _execute_sparQL_command(
             f"It introduces disjointness violations: {detail}"
         )
 
-    output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+
     g.serialize(destination=output_path, format="ttl")
     return output_path
 
@@ -123,6 +131,13 @@ def _generate_sparQL():
         raise SystemExit(0)
     else:
         raise RuntimeError("Please enter 'y' or 'n'.")
+    
+def _new_evidence_ontology_persistence():
+    # each run should use its own summary.txt, enhanced_xr.ttl
+    # for each run, create a copy of the embedding if it doesn't exist yet
+    # add the new embedding to pkl, add the new HNSW
+
+    pass
     
 @contextmanager
 def timed_stage(name: str):

@@ -72,3 +72,6 @@ PATH_CONFIDENCE_DECAY = 0.9
 # --- Generate sparQL iif computed pheromone strength is above x value
 # set it to 0.0 for debugging (generate a sparQL for all)
 PHEROMONE_SPARQL_GENERATION_MINIMUM = 0.0
+
+NEW_EVIDENCE_PERSISTENCE = True
+# PHEROMONE_BLACKBOARD_PERSISTENCE = False
