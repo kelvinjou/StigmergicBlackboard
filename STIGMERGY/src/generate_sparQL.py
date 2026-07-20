@@ -25,7 +25,7 @@ PREFIX_PATTERN = re.compile(r"(?im)^\s*PREFIX\s+\w+:\s*<[^>]+>\s*$")
 INSERT_PATTERN = re.compile(r"(?i)INSERT\s+DATA\s*\{")
 
 # apply minimum strength filtering then get top K
-def strongest_communities(minimum: int, k: int) -> list[dict]:
+def strongest_communities(minimum: float, k: int) -> list[dict]:
     with open(BLACKBOARD_PATH, "r", encoding="utf-8") as file:
         # filter out commnuities with low strength
         qualifiers = (
