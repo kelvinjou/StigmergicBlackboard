@@ -25,16 +25,16 @@ Decision Rules
 - Prefer the strongest, most specific relationship supported by repeated
   evidence.
 - Treat singular and plural forms of the same concept as the same community.
-  For example, "Passive input devices", "Passive Input Device", and
-  ex:PassiveInputDevice refer to the same concept when an existing community
-  label or local name matches after case, whitespace, hyphen, and trailing
-  plural "s"/"es" normalization.
+  For example, an evidence phrase like "widgets", the label "Widget", and a
+  community local name "Widget" refer to the same concept when they match after
+  case, whitespace, hyphen, and trailing plural "s"/"es" normalization.
 - When evidence names a singular/plural variant of an existing community,
   reuse the exact existing community URI. Do not create a new pluralized or
   singularized owl:Class.
 - If both relationship endpoints are already represented by provided
   communities, insert only a new relationship edge between those exact existing
-  community URIs.
+  community URIs. Never add, change, or repeat an rdfs:subClassOf triple on a
+  community that already exists; existing classes keep their current parent.
 - If one endpoint is represented by a provided community and the other endpoint
   is a meaningful missing concept from the evidence, create the missing concept
   as a new owl:Class, place it in the class hierarchy with rdfs:subClassOf,
@@ -48,7 +48,8 @@ Grounding Rules
 - Every non-empty INSERT must use at least one exact URI from the provided
   "communities" list.
 - Existing communities must be written with their exact full URI in angle
-  brackets, for example <http://example.org/3dui-ontology#TravelTechnique>.
+  brackets, exactly as given in the "communities" input (for example
+  <http://example.org/3dui-ontology#SomeExistingConcept>).
 - Before creating any new class, compare the evidence phrase against all
   provided community URIs, local names, labels, and descriptions. Normalize by
   lowercasing, removing punctuation/whitespace/hyphens, and comparing simple
@@ -59,18 +60,39 @@ Grounding Rules
   label.
 - New concept comments must summarize the concrete evidence phrase in one short
   sentence.
-- Every new owl:Class must include one rdfs:subClassOf triple so it is not
-  disconnected from the ontology class hierarchy.
-- Choose the rdfs:subClassOf parent by semantic fit from existing ontology
-  communities. For human/user effects, symptoms, perception, cognition, or UX
-  issues, prefer ex:HumanFactor. For interaction methods, prefer
-  ex:InteractionTechnique. For tasks, prefer ex:Task. For UI parts, prefer
-  ex:UIComponent. If no specific parent fits, use ex:Concept.
-- Do not make a new effect or symptom a subclass of the technique that causes
-  it; connect it to that technique with the relationship edge instead.
+- Every new owl:Class must include exactly one rdfs:subClassOf triple so it is
+  not disconnected from the ontology class hierarchy. Give a new class a single
+  parent; never list two parents that belong to unrelated top-level categories.
+- Choose the rdfs:subClassOf parent by semantic fit: pick the single provided
+  community that the new concept most specifically IS-A-KIND-OF, judging from
+  that community's own uri, label, and description. Prefer the most specific
+  fitting community over a broad one. If no provided community is a genuine
+  parent, attach the new class to the most general/root concept class of the
+  ontology rather than forcing an ill-fitting parent.
+- Do not make a caused or affected concept a subclass of the concept that causes
+  or produces it; connect them with the causal relationship edge instead.
 - Predicates must come from the evidence relationship, converted to lowerCamelCase
   under the ex: namespace, such as ex:causes, ex:supports, ex:requires, or
   ex:contradicts.
+
+Class Hierarchy Integrity (disjointness)
+- rdfs:subClassOf means "is a kind of", not "is related to". Only use it when the
+  child genuinely IS a specialization of the parent.
+- Ontologies typically partition their concepts into top-level categories that
+  are mutually disjoint (for example, physical things vs. abstract methods vs.
+  properties of people). Infer these categories from the provided communities'
+  descriptions. A class may descend from only ONE such category; placing any
+  class under two disjoint categories makes the ontology inconsistent and the
+  update will be rejected.
+- When the evidence describes an association BETWEEN concepts of different
+  categories -- one enabling, supporting, using, requiring, or causing another --
+  express it as a relationship edge, never with rdfs:subClassOf. An artifact is
+  not "a kind of" the method it supports, and a method is not "a kind of" the
+  artifact it uses.
+- Example (abstract): if evidence says a concept in category A "supports" a
+  concept in category B, emit
+  <existing-A-uri> ex:supports <existing-B-uri>, and do NOT add
+  rdfs:subClassOf <existing-B-uri> to the category-A concept.
 
 Hard Bans
 - Never output placeholder names or generic template text.
@@ -78,6 +100,9 @@ Hard Bans
   ExistingCommunityA, ExistingCommunityB, inferredPredicate, New Concept,
   Short description inferred from evidence.
 - Never invent relationships that are not supported by the evidence.
+- Never place a class under two disjoint top-level categories, and never use
+  rdfs:subClassOf to express a mere association between concepts of different
+  categories (use a relationship edge instead).
 - Never emit DELETE, DROP, CLEAR, LOAD, SERVICE, or any operation other than
   INSERT DATA.
 
@@ -105,7 +130,10 @@ INSERT DATA {
 Silent checks only:
 - The SPARQL contains no banned placeholder tokens.
 - Every non-empty update includes at least one exact URI from "communities".
-- Every new owl:Class includes an rdfs:subClassOf parent.
+- Every new owl:Class includes exactly one rdfs:subClassOf parent, and is not
+  placed under two disjoint top-level categories.
+- No rdfs:subClassOf is used where the relationship is a mere association between
+  concepts of different categories.
 - Every new class label, comment, URI, and edge is grounded in the input
   evidence.
 After the closing fence, stop.

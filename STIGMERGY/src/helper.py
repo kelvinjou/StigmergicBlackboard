@@ -5,6 +5,7 @@ import sys
 from time import perf_counter
 
 from rdflib import Graph
+from rdflib.namespace import OWL, RDFS
 
 from src.config import PHEROMONE_SPARQL_GENERATION_MINIMUM
 from src.generate_sparQL import (
@@ -13,6 +14,10 @@ from src.generate_sparQL import (
     strongest_communities,
 )
 from src.preprocessing import MAIN_ONTOLOGY
+
+
+class InconsistentUpdateError(RuntimeError):
+    """A SPARQL update would place a class under two owl:disjointWith branches."""
 
 
 def _load_blackboard_items(blackboard_path):
@@ -38,6 +43,33 @@ def _write_blackboard_items(blackboard_path, items):
         for item in items.values():
             blackboard.write(json.dumps(item) + "\n")
 
+def _local_name(uri) -> str:
+    text = str(uri)
+    for sep in ("#", "/"):
+        if sep in text:
+            text = text.rsplit(sep, 1)[-1]
+    return text
+
+
+def _disjointness_violations(graph: Graph) -> set[tuple]:
+    """Classes that are transitively rdfs:subClassOf two owl:disjointWith branches.
+
+    This is the exact inconsistency Option 2 introduced (a device made a subclass
+    of both HardwareComponent and the disjoint InteractionTechnique). It is a
+    pure traversal of the already-parsed graph -- no OWL reasoner and no LLM
+    call -- so it adds no network latency. Returns (class, branch_a, branch_b)
+    with the branch pair order-normalized so mirror declarations collapse.
+    """
+    violations: set[tuple] = set()
+    for branch_a, _, branch_b in graph.triples((None, OWL.disjointWith, None)):
+        subs_a = set(graph.transitive_subjects(RDFS.subClassOf, branch_a))
+        subs_b = set(graph.transitive_subjects(RDFS.subClassOf, branch_b))
+        low, high = sorted((branch_a, branch_b), key=str)
+        for clash in subs_a & subs_b:
+            violations.add((clash, low, high))
+    return violations
+
+
 def _execute_sparQL_command(
     ttl_path,
     command,
@@ -45,8 +77,23 @@ def _execute_sparQL_command(
 ):
     g = Graph()
     g.parse(ttl_path, format="ttl")
+    # Snapshot pre-existing violations so the guard only rejects NEW ones the
+    # update introduces, never inconsistencies already baked into the ontology.
+    before = _disjointness_violations(g)
     command = _extract_sparql_update(command)
     g.update(command)
+
+    introduced = _disjointness_violations(g) - before
+    if introduced:
+        detail = "; ".join(
+            f"{_local_name(c)} would be subClassOf both "
+            f"{_local_name(a)} and {_local_name(b)} (disjoint)"
+            for c, a, b in sorted(introduced, key=str)
+        )
+        raise InconsistentUpdateError(
+            f"Rejected SPARQL update; not written to {output_path}. "
+            f"It introduces disjointness violations: {detail}"
+        )
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -60,10 +107,15 @@ def _generate_sparQL():
     if user_input == "y":
         communities = strongest_communities(minimum=PHEROMONE_SPARQL_GENERATION_MINIMUM, k=3)
         sparql_command = retrieve_blurbs(communities=communities)
-        _execute_sparQL_command(
-            ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
-            command=sparql_command
-        )
+        try:
+            _execute_sparQL_command(
+                ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
+                command=sparql_command
+            )
+        except InconsistentUpdateError as error:
+            print(f"SPARQL update rejected (ontology left unchanged):\n {error}")
+            print(f"Offending SPARQL:\n {sparql_command}")
+            return
 
         print(f"SPARQL commands:\n {sparql_command}")
 
