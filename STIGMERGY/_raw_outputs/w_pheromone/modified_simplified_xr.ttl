@@ -1,0 +1,879 @@
+@prefix : <http://example.org/3dui-ontology#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://example.org/3dui-ontology> a owl:Ontology ;
+    rdfs:label "LaViola et al. 3D User Interfaces Ontology" ;
+    dcterms:creator "Claude (AI Assistant)" ;
+    dcterms:date "2026-05-14"^^xsd:date ;
+    dcterms:source "LaViola, J. J., Kruijff, E., Bowman, D. A., & Poupyrev, I. (2017/2018). 3D User Interfaces: Theory and Practice (2nd ed.). CRC Press."@en ;
+    rdfs:comment "An OWL ontology modeling the concepts, hardware, interaction techniques, and design principles from LaViola, Kruijff, Bowman, and Poupyrev (2017/2018), 3D User Interfaces: Theory and Practice, 2nd edition." ;
+    owl:versionInfo "1.0" .
+
+:3DMenu a owl:Class ;
+    rdfs:label "3D Menu"@en ;
+    :coveredInChapter :Ch9 ;
+    :evaluatedBy :HeuristicEvaluation,
+        :UserStudy ;
+    :supportsTask :SystemControlTask ;
+    rdfs:comment "Menus rendered in 3D space that users interact with via ray-casting, direct touch, or gesture."@en ;
+    rdfs:subClassOf :SystemControlTechnique .
+
+:3DWidget a owl:Class ;
+    rdfs:label "3D Widget"@en ;
+    :coveredInChapter :Ch10 ;
+    rdfs:comment "A spatially anchored, interactive visual object that presents controls or information in the context of the 3D scene, such as sliders, buttons, or handles."@en ;
+    rdfs:subClassOf :UIComponent .
+
+:AdaptToUser a owl:Class ;
+    rdfs:label "Adapt to User Capabilities"@en ;
+    :appliesTo :Ergonomics ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Tailor interaction parameters, display settings, and task difficulty to the individual’s physical stature, motor skills, and cognitive profile."@en ;
+    rdfs:subClassOf :DesignPrinciple .
+
+:AerospaceTraining a owl:Class ;
+    rdfs:label "Aerospace Training"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Flight and maintenance simulators that replicate cockpit environments and procedural tasks for pilot and crew training."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:Aperture a owl:Class ;
+    rdfs:label "Aperture"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :SelectionTask ;
+    rdfs:comment "Scales a selection cone around the ray to encompass distant or small targets more easily."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:ArchitecturalSubdivisions a owl:Class ;
+    rdfs:label "Architectural Subdivisions"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Using corridors, rooms, and other architectural elements to create memorable and distinct regions that support cognitive mapping."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:Architecture a owl:Class ;
+    rdfs:label "Architecture"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Walkthrough and review of building designs at full scale prior to physical construction."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:Attention a owl:Class ;
+    rdfs:label "Attention"@en ;
+    :coveredInChapter :Ch3 ;
+    rdfs:subClassOf :CognitiveFactor .
+
+:AuditoryOutputDevice a owl:Class ;
+    rdfs:label "Auditory Output Device"@en ;
+    rdfs:comment "Spatial audio hardware such as headphones or speaker arrays that render 3D soundscapes."@en ;
+    rdfs:subClassOf :OutputDevice .
+
+:AutostereoscopicDisplay a owl:Class ;
+    rdfs:label "Autostereoscopic Display"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Displays that provide stereoscopic depth without requiring special glasses, often using lenticular lenses or parallax barriers."@en ;
+    rdfs:subClassOf :DisplayDevice .
+
+:BinocularDisparity a owl:Class ;
+    rdfs:label "Binocular Disparity"@en ;
+    rdfs:subClassOf :VisualFactor .
+
+:Breadcrumbs a owl:Class ;
+    rdfs:label "Breadcrumbs"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Discrete markers placed along a route that indicate the path back to a known origin."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:CaveAutomaticVirtualEnvironment a owl:Class ;
+    rdfs:label "CAVE Automatic Virtual Environment (CAVE)"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "A room-sized 3D display using rear-projection on multiple walls and a floor to surround the user with stereoscopic imagery."@en ;
+    rdfs:subClassOf :StereoscopicDisplay .
+
+:CognitiveWalkthrough a owl:Class ;
+    rdfs:label "Cognitive Walkthrough"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Evaluators simulate a user’s problem-solving process at each step of a task to uncover learnability and comprehension issues."@en ;
+    rdfs:subClassOf :EvaluationMethod .
+
+:Compass a owl:Class ;
+    rdfs:label "Compass"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "A virtual compass that provides egocentric orientation relative to known reference directions, often anchored to global or local coordinate frames."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:DepthPerception a owl:Class ;
+    rdfs:label "Depth Perception"@en ;
+    rdfs:subClassOf :VisualFactor .
+
+:DollhouseSelection a owl:Class ;
+    rdfs:label "Dollhouse Selection"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :SelectionTask,
+        :TravelTask ;
+    rdfs:comment "Presents a miniature replica of the scene (World-in-Miniature) for selecting distant objects at a comfortable arm’s length."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:Education a owl:Class ;
+    rdfs:label "Education"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Immersive pedagogical environments that enhance learning through active spatial exploration and manipulation."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:EnsurePhysicalSafety a owl:Class ;
+    rdfs:label "Ensure Physical Safety"@en ;
+    :appliesTo :Ergonomics ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Guard against real-world collisions, trip hazards, and fatigue by defining safe boundaries and enforcing rest intervals during immersive use."@en ;
+    rdfs:subClassOf :DesignPrinciple .
+
+:Entertainment a owl:Class ;
+    rdfs:label "Entertainment"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Games, narrative experiences, and theme-park attractions that leverage immersion and presence for engagement."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:Fatigue a owl:Class ;
+    rdfs:label "Fatigue"@en ;
+    :coveredInChapter :Ch3 ;
+    rdfs:subClassOf :PhysicalFactor .
+
+:FieldOfView a owl:Class ;
+    rdfs:label "Field of View"@en ;
+    rdfs:subClassOf :VisualFactor .
+
+:FieldStudy a owl:Class ;
+    rdfs:label "Field Study"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Observation and data collection in the actual usage context, preserving ecological validity but sacrificing some experimental control."@en ;
+    rdfs:subClassOf :EvaluationMethod .
+
+:Flying a owl:Class ;
+    rdfs:label "Flying"@en ;
+    :coveredInChapter :Ch7 ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "Allows unrestricted translation in all six degrees of freedom, typically controlled by a joystick or hand-directed vector."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:Frusta a owl:Class ;
+    rdfs:label "Frusta"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :SelectionTask ;
+    rdfs:comment "Employs a frustum-shaped volume projecting from the hand to capture targets within a solid angle."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:GoGoTechnique a owl:Class ;
+    rdfs:label "Go-Go Technique"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask,
+        :SelectionTask ;
+    rdfs:comment "Extends the effective reach of the virtual arm using a non-linear mapping so distant objects can be selected or manipulated."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:HOMER a owl:Class ;
+    rdfs:label "Hand-Centered Object Manipulation with Extending Ray-Casting (HOMER)"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask,
+        :SelectionTask ;
+    rdfs:comment "Combines ray-casting for selection with scaled virtual-hand manipulation once an object is grabbed, reducing fatigue while retaining precision."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:HandGestures a owl:Class ;
+    rdfs:label "Hand Gestures"@en ;
+    :coveredInChapter :Ch9 ;
+    :evaluatedBy :HeuristicEvaluation,
+        :UserStudy ;
+    :supportsTask :SystemControlTask ;
+    rdfs:comment "Symbolic or deictic hand motions recognized by the system as commands, such as waving, pinching, or signing."@en ;
+    rdfs:subClassOf :SystemControlTechnique .
+
+:HapticOutputDevice a owl:Class ;
+    rdfs:label "Haptic Output Device"@en ;
+    :evaluatedBy :UserStudy ;
+    rdfs:comment "Provides tactile or force-feedback sensations to the user, such as gloves, exoskeletons, or vibratory actuators."@en ;
+    rdfs:subClassOf :OutputDevice .
+
+:HeadMountedDisplayEvidence30OfYouthReportedWearingHead a :GroundedEvidence,
+        owl:Class ;
+    rdfs:label "Evidence for HeadMountedDisplay"@en ;
+    :isGroundedEvidenceFor :HeadMountedDisplay ;
+    rdfs:comment "30% of youth reported wearing head mounted display make them nauseous"@en ;
+    rdfs:subClassOf :HeadMountedDisplay .
+
+:HybridTracker a owl:Class ;
+    rdfs:label "Hybrid Tracker"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Combines multiple sensing technologies to mitigate individual weaknesses such as occlusion or drift."@en ;
+    rdfs:subClassOf :TrackingSystem .
+
+:InertialTracker a owl:Class ;
+    rdfs:label "Inertial Tracker"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Employs accelerometers and gyroscopes to estimate orientation and derive position via integration, susceptible to drift."@en ;
+    rdfs:subClassOf :TrackingSystem .
+
+:IsotonicInputDevice a owl:Class ;
+    rdfs:label "Isotonic Input Device"@en ;
+    rdfs:comment "Devices that sense position or displacement in space, mapping directly to absolute or relative virtual coordinates."@en ;
+    rdfs:subClassOf :InputDevice .
+
+:Kinesthesia a owl:Class ;
+    rdfs:label "Kinesthesia"@en ;
+    rdfs:comment "Sense of limb and body movement that guides motor action and spatial localization in the absence of external vision."@en ;
+    rdfs:subClassOf :ProprioceptiveFactor .
+
+:MagneticTracker a owl:Class ;
+    rdfs:label "Magnetic Tracker"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Measures magnetic field distortions in a controlled workspace to determine position and orientation."@en ;
+    rdfs:subClassOf :TrackingSystem .
+
+:Mark a owl:Class ;
+    rdfs:label "Mark"@en ;
+    :coveredInChapter :Ch10 ;
+    rdfs:comment "Transient or persistent visual annotations used to highlight regions, paths, or points of interest within the virtual environment."@en ;
+    rdfs:subClassOf :UIComponent .
+
+:MarkingMenu a owl:Class ;
+    rdfs:label "Marking Menu"@en ;
+    :coveredInChapter :Ch9 ;
+    :supportsTask :SystemControlTask ;
+    rdfs:comment "A radial menu invoked by a gesture where the direction of movement selects a menu item, leveraging motor memory for fast expert usage."@en ;
+    rdfs:subClassOf :SystemControlTechnique .
+
+:MechanicalTracker a owl:Class ;
+    rdfs:label "Mechanical Tracker"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Uses physical linkages with known geometry to directly report end-effector position."@en ;
+    rdfs:subClassOf :TrackingSystem .
+
+:MedicalVisualization a owl:Class ;
+    rdfs:label "Medical Visualization"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Use of 3D UIs for visualizing anatomical structures, surgical planning, and patient-specific models."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:MentalModel a owl:Class ;
+    rdfs:label "Mental Model"@en ;
+    rdfs:subClassOf :CognitiveFactor .
+
+:MinimizeCognitiveLoad a owl:Class ;
+    rdfs:label "Minimize Cognitive Load"@en ;
+    :appliesTo :CognitiveLoad ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Reduce the mental effort required to operate the interface by simplifying decisions, automating secondary tasks, and presenting information clearly."@en ;
+    rdfs:subClassOf :DesignPrinciple .
+
+:MotionParallax a owl:Class ;
+    rdfs:label "Motion Parallax"@en ;
+    rdfs:subClassOf :VisualFactor .
+
+:NASATLX a owl:Class ;
+    rdfs:label "NASA Task Load Index (NASA-TLX)"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "A multi-dimensional rating scale that assesses perceived workload across mental demand, physical demand, temporal demand, performance, effort, and frustration."@en ;
+    rdfs:subClassOf :EvaluationMethod .
+
+:OpticalTracker a owl:Class ;
+    rdfs:label "Optical Tracker"@en ;
+    :coveredInChapter :Ch4 ;
+    :requires :PassiveInputDevice ;
+    rdfs:comment "Uses cameras to detect markers or natural features in order to compute position and orientation."@en ;
+    rdfs:subClassOf :TrackingSystem .
+
+:PRISM a owl:Class ;
+    rdfs:label "PRISM"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask ;
+    rdfs:comment "Progressive Refinement of Interactive Selection and Manipulation; uses coarse-to-fine input scaling to improve 3D positioning precision."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:PropBasedManipulation a owl:Class ;
+    rdfs:label "Prop-Based Manipulation"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask ;
+    rdfs:comment "Uses physical props instrumented with trackers as tangible proxies for virtual objects, leveraging real-world tactile cues."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:ProvideMultisensoryFeedback a owl:Class ;
+    rdfs:label "Provide Multisensory Feedback"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Complement visual changes with auditory, haptic, or vestibular cues to reinforce actions and confirm state changes."@en ;
+    rdfs:subClassOf :DesignPrinciple .
+
+:RayCasting a owl:Class ;
+    rdfs:label "Ray Casting"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :SelectionTask ;
+    rdfs:comment "Extends a ray from the virtual hand or controller; the first intersected object is selected."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:RealWalking a owl:Class ;
+    rdfs:label "Real Walking"@en ;
+    :addressesHumanFactor :Cybersickness ;
+    :coveredInChapter :Ch7 ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "The user physically walks within a tracked space and the virtual viewpoint moves correspondingly, providing strong proprioceptive cues."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:RedirectedWalking a owl:Class ;
+    rdfs:label "Redirected Walking"@en ;
+    :addressesHumanFactor :Cybersickness ;
+    :coveredInChapter :Ch7 ;
+    :evaluatedBy :SimulatorSicknessQuestionnaire,
+        :UserStudy ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "Subtly rotates the virtual scene so that the user unknowingly turns in the physical space, enabling exploration of large virtual areas within a small room."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:ScalableVirtualHand a owl:Class ;
+    rdfs:label "Scalable Virtual Hand"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask ;
+    rdfs:comment "Scales the virtual hand and nearby interaction space so large or tiny objects can be manipulated with natural hand movements."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:ScientificVisualization a owl:Class ;
+    rdfs:label "Scientific Visualization"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Exploration of multi-dimensional datasets such as molecular models, fluid dynamics, and astrophysical simulations."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:Shadow a owl:Class ;
+    rdfs:label "Shadow (Projection)"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :SelectionTask ;
+    rdfs:comment "Projects a shadow or proxy of the hand onto surfaces or objects to indicate selection intent."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:Signage a owl:Class ;
+    rdfs:label "Signage"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Virtual signs or labels that provide textual or symbolic navigation information analogous to real-world signage."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:SnapDragging a owl:Class ;
+    rdfs:label "Snap Dragging"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask ;
+    rdfs:comment "Constrains object translation to axes or planes and snaps to grid points to aid precise placement."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:SoftwareToolkit a owl:Class ;
+    rdfs:label "Software Toolkit"@en ;
+    :coveredInChapter :Ch5 ;
+    rdfs:comment "A reusable set of libraries and tools for building 3D UIs, abstracting hardware and rendering complexities."@en ;
+    rdfs:subClassOf :Concept .
+
+:SpatialAugmentedRealityDisplay a owl:Class ;
+    rdfs:label "Spatial Augmented Reality (SAR) Display"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Projected or transparent displays that augment the physical environment at a fixed location without requiring a wearable display."@en ;
+    rdfs:subClassOf :DisplayDevice .
+
+:SpatialHearing a owl:Class ;
+    rdfs:label "Spatial Hearing"@en ;
+    rdfs:subClassOf :AuditoryFactor .
+
+:Steering a owl:Class ;
+    rdfs:label "Steering"@en ;
+    :coveredInChapter :Ch7 ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "The user steers direction while automatic forward motion is applied, similar to driving or riding."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:SupportSpatialUnderstanding a owl:Class ;
+    rdfs:label "Support Spatial Understanding"@en ;
+    :appliesTo :SpatialMemory ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Provide wayfinding aids, consistent scale, and environment cues that help users build accurate cognitive maps of the virtual space."@en ;
+    rdfs:subClassOf :DesignPrinciple .
+
+:SurgicalTraining a owl:Class ;
+    rdfs:label "Surgical Training"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Simulator-based training environments that let surgeons rehearse procedures using haptic and visual feedback."@en ;
+    rdfs:subClassOf :ApplicationDomain .
+
+:Symbol a owl:Class ;
+    rdfs:label "Symbol"@en ;
+    :coveredInChapter :Ch10 ;
+    rdfs:comment "Abstract graphic representations such as icons, glyphs, or markers used to convey data or affordances in 3D space."@en ;
+    rdfs:subClassOf :UIComponent .
+
+:Teleportation a owl:Class ;
+    rdfs:label "Teleportation"@en ;
+    :addressesHumanFactor :Cybersickness ;
+    :coveredInChapter :Ch7 ;
+    :evaluatedBy :SimulatorSicknessQuestionnaire,
+        :UserStudy ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "The user points to a destination and is instantaneously transported, eliminating optic flow to reduce cybersickness."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:TrailCues a owl:Class ;
+    rdfs:label "Trail Cues"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "Leaves a visible trail or path history to support backtracking and route learning."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:TwoHandedManipulation a owl:Class ;
+    rdfs:label "Two-Handed Manipulation"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask ;
+    rdfs:comment "Uses both hands in concert to scale, rotate, and translate objects using natural bimanual affordances."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:UltrasonicTracker a owl:Class ;
+    rdfs:label "Ultrasonic Tracker"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:comment "Measures time-of-flight of ultrasonic pulses between emitters and receivers to compute position."@en ;
+    rdfs:subClassOf :TrackingSystem .
+
+:VirtualHand a owl:Class ;
+    rdfs:label "Virtual Hand"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask,
+        :SelectionTask ;
+    rdfs:comment "Maps the physical hand position directly into the virtual space for touch-based selection."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:VirtualKeyboard a owl:Class ;
+    rdfs:label "Virtual Keyboard"@en ;
+    :coveredInChapter :Ch9 ;
+    :supportsTask :SymbolicInputTask,
+        :SystemControlTask ;
+    rdfs:comment "A keyboard or keypad rendered in the virtual environment for symbolic text entry."@en ;
+    rdfs:subClassOf :SystemControlTechnique .
+
+:VirtualMap a owl:Class ;
+    rdfs:label "Virtual Map"@en ;
+    :coveredInChapter :Ch8 ;
+    :supportsTask :WayfindingTask ;
+    rdfs:comment "An abstracted top-down or 3D map that displays the user’s location and landmarks in the environment."@en ;
+    rdfs:subClassOf :WayfindingTechnique .
+
+:VirtualPanel a owl:Class ;
+    rdfs:label "Virtual Panel"@en ;
+    :coveredInChapter :Ch10 ;
+    rdfs:comment "A planar or curved surface embedded in 3D space that hosts 2D-style widgets and is oriented for user readability."@en ;
+    rdfs:subClassOf :UIComponent .
+
+:VirtualPointer a owl:Class ;
+    rdfs:label "Virtual Pointer"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :SelectionTask ;
+    rdfs:comment "Uses a cursor or reticle in the 3D view to point at objects, often mapped to a 2D device."@en ;
+    rdfs:subClassOf :SelectionTechnique .
+
+:VirtualSphere a owl:Class ;
+    rdfs:label "Virtual Sphere"@en ;
+    :coveredInChapter :Ch6 ;
+    :supportsTask :ManipulationTask ;
+    rdfs:comment "Maps hand movements onto a virtual sphere surrounding an object to intuitively control rotation."@en ;
+    rdfs:subClassOf :ManipulationTechnique .
+
+:VisualAcuity a owl:Class ;
+    rdfs:label "Visual Acuity"@en ;
+    rdfs:subClassOf :VisualFactor .
+
+:VoiceCommands a owl:Class ;
+    rdfs:label "Voice Commands"@en ;
+    :coveredInChapter :Ch9 ;
+    :supportsTask :SystemControlTask ;
+    rdfs:comment "Spoken natural language or keyword utterances used to trigger application functions without manual input."@en ;
+    rdfs:subClassOf :SystemControlTechnique .
+
+:WalkingInPlace a owl:Class ;
+    rdfs:label "Walking In Place"@en ;
+    :coveredInChapter :Ch7 ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "The user walks in place to generate forward motion in the virtual world without requiring a large physical space."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:WorldInMiniatureTravel a owl:Class ;
+    rdfs:label "World in Miniature Travel"@en ;
+    :coveredInChapter :Ch7 ;
+    :supportsTask :TravelTask ;
+    rdfs:comment "Uses a scaled miniature of the environment to allow the user to place or drag a viewpoint proxy to a desired location."@en ;
+    rdfs:subClassOf :TravelTechnique .
+
+:addressesHumanFactor a owl:ObjectProperty ;
+    rdfs:label "addresses human factor"@en ;
+    rdfs:comment "Indicates that a concept, technique, or principle is concerned with a specific human factor."@en ;
+    rdfs:domain :Concept ;
+    rdfs:range :HumanFactor .
+
+:appliesTo a owl:ObjectProperty ;
+    rdfs:label "applies to"@en ;
+    rdfs:comment "Links a design principle to the concepts or techniques it guides."@en ;
+    rdfs:domain :DesignPrinciple ;
+    rdfs:range :Concept .
+
+:causes a owl:ObjectProperty ;
+    rdfs:label "causes"@en ;
+    rdfs:comment "Indicates a causal relationship, such as a mismatch between visual and vestibular cues causing cybersickness."@en ;
+    rdfs:domain :Concept ;
+    rdfs:range :HumanFactor .
+
+:chapterNumber a owl:DatatypeProperty ;
+    rdfs:label "chapter number"@en ;
+    rdfs:domain :Chapter ;
+    rdfs:range xsd:integer .
+
+:coveredInChapter a owl:ObjectProperty ;
+    rdfs:label "covered in chapter"@en ;
+    rdfs:comment "Associates a concept with the textbook chapter in which it is primarily discussed."@en ;
+    rdfs:domain :Concept ;
+    rdfs:range :Chapter .
+
+:definition a owl:DatatypeProperty ;
+    rdfs:label "definition"@en ;
+    rdfs:domain :Concept ;
+    rdfs:range xsd:string .
+
+:evaluatedBy a owl:ObjectProperty ;
+    rdfs:label "evaluated by"@en ;
+    rdfs:comment "Links a concept, technique, or application to the evaluation methods used to assess it."@en ;
+    rdfs:domain :Concept ;
+    rdfs:range :EvaluationMethod .
+
+:hasSubConcept a owl:ObjectProperty ;
+    rdfs:label "has sub-concept"@en ;
+    rdfs:comment "A broad relation indicating a compositional or taxonomic subordinate; in practice subclassing is preferred."@en ;
+    rdfs:domain :Concept ;
+    rdfs:range :Concept .
+
+:isGroundedEvidenceFor a owl:ObjectProperty ;
+    rdfs:label "is grounded evidence for"@en ;
+    rdfs:comment "Links a grounded evidence class to the ontology concept it supports."@en ;
+    rdfs:domain :GroundedEvidence ;
+    rdfs:range :Concept .
+
+:isometricInputDevice a owl:Class ;
+    rdfs:label "Isometric Input Device"@en ;
+    rdfs:comment "Force-sensing devices that generate input proportional to the force or pressure applied rather than spatial displacement."@en ;
+    rdfs:subClassOf :InputDevice .
+
+:supportsTask a owl:ObjectProperty ;
+    rdfs:label "supports task"@en ;
+    rdfs:comment "Links an interaction technique to the task it enables or improves."@en ;
+    rdfs:domain :InteractionTechnique ;
+    rdfs:range :Task .
+
+:usesHardware a owl:ObjectProperty ;
+    rdfs:label "uses hardware"@en ;
+    rdfs:comment "Indicates that a technique or system relies on a specific hardware component."@en ;
+    rdfs:domain :InteractionTechnique ;
+    rdfs:range :HardwareComponent .
+
+:AuditoryFactor a owl:Class ;
+    rdfs:label "Auditory Factor"@en ;
+    :coveredInChapter :Ch2 ;
+    rdfs:subClassOf :PerceptualFactor .
+
+:Ch1 a :Chapter ;
+    rdfs:label "Chapter 1 — Introduction to 3D User Interfaces"@en ;
+    :chapterNumber "1"^^xsd:int ;
+    rdfs:comment "3D user interfaces provide the foundational human-computer interaction paradigms for immersive virtual and augmented environments, requiring an interdisciplinary synthesis of computer science, human factors, and perceptual psychology."@en .
+
+:Ch5 a :Chapter ;
+    rdfs:label "Chapter 5 — 3D User Interface Software"@en ;
+    :chapterNumber "5"^^xsd:int ;
+    rdfs:comment "Software toolkits and frameworks abstract low-level hardware access, providing reusable architectures for rendering, input-device abstraction, and interaction-technique implementation that accelerate 3D UI development."@en .
+
+:CognitiveLoad a owl:Class ;
+    rdfs:label "Cognitive Load"@en ;
+    rdfs:subClassOf :CognitiveFactor .
+
+:PassiveInputDevice a owl:Class ;
+    rdfs:label "Passive input devices",
+        "Passive Input Device"@en ;
+    :supports :InteractionTechnique,
+        :TravelTechnique ;
+    rdfs:comment "Passive input devices use optical or hybrid tracking systems to capture gaze or gestures.",
+        "Sensors that capture user state or environment without requiring active physical manipulation, such as eye trackers or hand-tracking cameras."@en ;
+    rdfs:subClassOf :InputDevice,
+        :InteractionTechnique .
+
+:ProprioceptiveFactor a owl:Class ;
+    rdfs:label "Proprioceptive Factor"@en ;
+    :coveredInChapter :Ch2 ;
+    rdfs:subClassOf :PerceptualFactor .
+
+:SpatialMemory a owl:Class ;
+    rdfs:label "Spatial Memory"@en ;
+    :coveredInChapter :Ch3 ;
+    rdfs:subClassOf :CognitiveFactor .
+
+:SymbolicInputTask a owl:Class ;
+    rdfs:label "Symbolic Input Task"@en ;
+    rdfs:subClassOf :Task .
+
+:Ergonomics a owl:Class ;
+    rdfs:label "Ergonomics"@en ;
+    :coveredInChapter :Ch3 ;
+    rdfs:comment "Study of postural comfort, muscle strain, and physical safety in sustained 3D UI use."@en ;
+    rdfs:subClassOf :PhysicalFactor .
+
+:GroundedEvidence a owl:Class ;
+    rdfs:label "Grounded Evidence"@en ;
+    rdfs:comment "A user-provided evidence class that records grounded quantitative or qualitative support for an ontology concept."@en ;
+    rdfs:subClassOf :Concept .
+
+:HeadMountedDisplay a owl:Class ;
+    rdfs:label "Head-Mounted Display (HMD)"@en ;
+    :coveredInChapter :Ch4 ;
+    :evaluatedBy :UserStudy ;
+    rdfs:comment "A wearable display that presents separate images to each eye to create stereoscopic depth in VR or AR."@en ;
+    rdfs:subClassOf :StereoscopicDisplay .
+
+:HeuristicEvaluation a owl:Class ;
+    rdfs:label "Heuristic Evaluation"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Expert reviewers inspect a 3D UI against recognized usability heuristics to identify potential problems without end-user participation."@en ;
+    rdfs:subClassOf :EvaluationMethod .
+
+:OutputDevice a owl:Class ;
+    rdfs:label "Output Device"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:subClassOf :HardwareComponent .
+
+:PhysicalFactor a owl:Class ;
+    rdfs:label "Physical Factor"@en ;
+    :coveredInChapter :Ch2,
+        :Ch3 ;
+    rdfs:subClassOf :HumanFactor .
+
+:SimulatorSicknessQuestionnaire a owl:Class ;
+    rdfs:label "Simulator Sickness Questionnaire (SSQ)"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "A standardized self-report instrument measuring oculomotor, disorientation, and nausea symptoms associated with simulator or VR exposure."@en ;
+    rdfs:subClassOf :EvaluationMethod .
+
+:StereoscopicDisplay a owl:Class ;
+    rdfs:label "Stereoscopic Display"@en ;
+    rdfs:subClassOf :DisplayDevice .
+
+:VestibularFactor a owl:Class ;
+    rdfs:label "Vestibular Factor"@en ;
+    :coveredInChapter :Ch2 ;
+    rdfs:subClassOf :PerceptualFactor .
+
+:Cybersickness a owl:Class ;
+    rdfs:label "Cybersickness"@en ;
+    :addressesHumanFactor :VestibularFactor ;
+    :coveredInChapter :Ch2,
+        :Ch3 ;
+    rdfs:comment "Simulator or motion sickness induced by a sensory conflict between visual and vestibular cues in VR."@en ;
+    rdfs:subClassOf :VestibularFactor .
+
+:DisplayDevice a owl:Class ;
+    rdfs:label "Display Device"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:subClassOf :HardwareComponent .
+
+:InputDevice a owl:Class ;
+    rdfs:label "Input Device"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:subClassOf :HardwareComponent .
+
+:Ch10 a :Chapter ;
+    rdfs:label "Chapter 10 — 3D Widgets, Symbols, and Marks"@en ;
+    :chapterNumber "10"^^xsd:int ;
+    rdfs:comment "Three-dimensional widgets and symbolic representations serve as persistent, interactive interface elements that bridge abstract data or commands with the spatial presentation of the virtual environment."@en .
+
+:CognitiveFactor a owl:Class ;
+    rdfs:label "Cognitive Factor"@en ;
+    :coveredInChapter :Ch2,
+        :Ch3 ;
+    rdfs:subClassOf :HumanFactor .
+
+:PerceptualFactor a owl:Class ;
+    rdfs:label "Perceptual Factor"@en ;
+    :coveredInChapter :Ch2 ;
+    rdfs:subClassOf :HumanFactor .
+
+:HardwareComponent a owl:Class ;
+    rdfs:label "Hardware Component"@en ;
+    rdfs:comment "Physical devices that constitute the input, output, and tracking infrastructure of a 3D user interface."@en ;
+    rdfs:subClassOf :Concept ;
+    owl:disjointWith :DesignPrinciple,
+        :EvaluationMethod,
+        :HumanFactor,
+        :InteractionTechnique,
+        :Task,
+        :UIComponent .
+
+:SystemControlTask a owl:Class ;
+    rdfs:label "System Control Task"@en ;
+    rdfs:subClassOf :Task .
+
+:SystemControlTechnique a owl:Class ;
+    rdfs:label "System Control Technique"@en ;
+    :coveredInChapter :Ch9 ;
+    rdfs:comment "Methods that allow the user to issue commands, change modes, or adjust parameters of the 3D UI without altering primary spatial task state."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:VisualFactor a owl:Class ;
+    rdfs:label "Visual Factor"@en ;
+    :coveredInChapter :Ch2 ;
+    rdfs:subClassOf :PerceptualFactor .
+
+:Ch9 a :Chapter ;
+    rdfs:label "Chapter 9 — System Control"@en ;
+    :chapterNumber "9"^^xsd:int ;
+    rdfs:comment "System control techniques in 3D UIs—including menus, gestures, and voice commands—enable users to alter application state without navigating away from the primary spatial context of the task."@en .
+
+:HumanFactor a owl:Class ;
+    rdfs:label "Human Factor"@en ;
+    rdfs:comment "Perceptual, cognitive, and physical characteristics of users that influence the design and effectiveness of 3D UIs."@en ;
+    rdfs:subClassOf :Concept .
+
+:TrackingSystem a owl:Class ;
+    rdfs:label "Tracking System"@en ;
+    :coveredInChapter :Ch4 ;
+    rdfs:subClassOf :HardwareComponent .
+
+:UserStudy a owl:Class ;
+    rdfs:label "User Study"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Controlled experiments with representative participants measuring task performance, errors, subjective preference, or physiological indicators."@en ;
+    rdfs:subClassOf :EvaluationMethod .
+
+:WayfindingTask a owl:Class ;
+    rdfs:label "Wayfinding Task"@en ;
+    rdfs:subClassOf :Task .
+
+:WayfindingTechnique a owl:Class ;
+    rdfs:label "Wayfinding Technique"@en ;
+    :coveredInChapter :Ch8 ;
+    rdfs:comment "Methods that assist the user in maintaining and recovering spatial orientation during navigation."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:ApplicationDomain a owl:Class ;
+    rdfs:label "Application Domain"@en ;
+    :coveredInChapter :Ch12 ;
+    rdfs:comment "Real-world fields or industries in which 3D UIs are deployed."@en ;
+    rdfs:subClassOf :Concept .
+
+:Ch3 a :Chapter ;
+    rdfs:label "Chapter 3 — Human Factors in 3D User Interfaces"@en ;
+    :chapterNumber "3"^^xsd:int ;
+    rdfs:comment "Cognitive load, spatial memory, susceptibility to cybersickness, and user comfort are critical human factors that determine the usability and safety of 3D UI experiences during prolonged use."@en .
+
+:Ch8 a :Chapter ;
+    rdfs:label "Chapter 8 — Wayfinding and Orientation"@en ;
+    :chapterNumber "8"^^xsd:int ;
+    rdfs:comment "Wayfinding and orientation performance depends on environmental cues, the user's cognitive map, and the alignment of egocentric and allocentric reference frames; designers must minimize wayfinding load to preserve task performance."@en .
+
+:ManipulationTechnique a owl:Class ;
+    rdfs:label "Manipulation Technique"@en ;
+    :coveredInChapter :Ch6 ;
+    rdfs:comment "Methods that allow the user to reposition, orient, or deform a virtual object in 3D space."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:UIComponent a owl:Class ;
+    rdfs:label "UI Component"@en ;
+    rdfs:comment "Reusable interface elements that present information or controls within a 3D UI."@en ;
+    rdfs:subClassOf :Concept ;
+    owl:disjointWith :DesignPrinciple,
+        :EvaluationMethod .
+
+:Ch12 a :Chapter ;
+    rdfs:label "Chapter 12 — Future Directions and Case Studies"@en ;
+    :chapterNumber "12"^^xsd:int ;
+    rdfs:comment "Emerging trends in artificial intelligence, sensor miniaturization, and multi-modal interaction are shaping the next generation of 3D UIs, with case studies in medicine, education, and entertainment illustrating domain-specific adaptation and future research directions."@en .
+
+:Ch2 a :Chapter ;
+    rdfs:label "Chapter 2 — The Human Sensorimotor System"@en ;
+    :chapterNumber "2"^^xsd:int ;
+    rdfs:comment "Effective 3D UI design must account for the capabilities and limitations of the human visual, auditory, vestibular, and proprioceptive sensorimotor systems to avoid sensory conflict and support natural motor behavior."@en .
+
+:Ch7 a :Chapter ;
+    rdfs:label "Chapter 7 — Travel"@en ;
+    :chapterNumber "7"^^xsd:int ;
+    rdfs:comment "Travel techniques range from physical walking to virtual steering, each imposing different costs on spatial updating, physical exertion, and susceptibility to cybersickness that must be matched to application constraints."@en .
+
+:SelectionTechnique a owl:Class ;
+    rdfs:label "Selection Technique"@en ;
+    :coveredInChapter :Ch6 ;
+    rdfs:comment "Methods that allow the user to choose a target object or region from a virtual 3D scene."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:TravelTask a owl:Class ;
+    rdfs:label "Travel Task"@en ;
+    rdfs:subClassOf :Task .
+
+:TravelTechnique a owl:Class ;
+    rdfs:label "Travel Technique"@en ;
+    :coveredInChapter :Ch7 ;
+    rdfs:comment "Methods that allow the user to change their viewpoint or position within a virtual environment."@en ;
+    rdfs:subClassOf :InteractionTechnique .
+
+:ManipulationTask a owl:Class ;
+    rdfs:label "Manipulation Task"@en ;
+    rdfs:subClassOf :Task .
+
+:SelectionTask a owl:Class ;
+    rdfs:label "Selection Task"@en ;
+    rdfs:subClassOf :Task .
+
+:Task a owl:Class ;
+    rdfs:label "Task"@en ;
+    rdfs:comment "A unit of work that a user seeks to accomplish within a 3D user interface."@en ;
+    rdfs:subClassOf :Concept ;
+    owl:disjointWith :DesignPrinciple,
+        :EvaluationMethod,
+        :UIComponent .
+
+:InteractionTechnique a owl:Class ;
+    rdfs:label "Interaction Technique"@en ;
+    rdfs:comment "Algorithm or method that translates user input into changes in application state within a 3D environment."@en ;
+    rdfs:subClassOf :Concept ;
+    owl:disjointWith :DesignPrinciple,
+        :EvaluationMethod,
+        :Task,
+        :UIComponent .
+
+:DesignPrinciple a owl:Class ;
+    rdfs:label "Design Principle"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "High-level guidelines derived from empirical research and human factors theory that inform the design of effective 3D UIs."@en ;
+    rdfs:subClassOf :Concept .
+
+:EvaluationMethod a owl:Class ;
+    rdfs:label "Evaluation Method"@en ;
+    :coveredInChapter :Ch11 ;
+    rdfs:comment "Methodologies used to assess the usability, performance, or user experience of 3D UIs."@en ;
+    rdfs:subClassOf :Concept ;
+    owl:disjointWith :DesignPrinciple .
+
+:Ch11 a :Chapter ;
+    rdfs:label "Chapter 11 — Design Guidelines and Evaluation"@en ;
+    :chapterNumber "11"^^xsd:int ;
+    rdfs:comment "Rigorous evaluation of 3D UIs requires a mix of usability inspection, controlled user studies, and field testing, guided by empirically validated design guidelines to ensure ecological validity and practical impact."@en .
+
+:Ch4 a :Chapter ;
+    rdfs:label "Chapter 4 — 3D User Interface Hardware"@en ;
+    :chapterNumber "4"^^xsd:int ;
+    rdfs:comment "The fidelity of a 3D UI experience depends on the latency, accuracy, and resolution of its hardware subsystem—encompassing displays, trackers, and input devices—making hardware selection a fundamental design decision."@en .
+
+:Chapter a owl:Class ;
+    rdfs:label "Chapter"@en .
+
+:Ch6 a :Chapter ;
+    rdfs:label "Chapter 6 — Selection and Manipulation"@en ;
+    :chapterNumber "6"^^xsd:int ;
+    rdfs:comment "Selection and manipulation techniques map user motor control to virtual 3D space, with ray-casting, virtual hand, and proxy-based methods offering distinct trade-offs among precision, reach, and user fatigue."@en .
+
+:Concept a owl:Class ;
+    rdfs:label "Domain Concept"@en ;
+    :coveredInChapter :Ch1 .
+

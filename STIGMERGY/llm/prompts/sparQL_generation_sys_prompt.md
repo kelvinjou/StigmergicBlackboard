@@ -1,10 +1,14 @@
+Return the final answer immediately.
 Return exactly one fenced SPARQL code block and nothing else.
-Your first non-whitespace characters must be ```sparql.
-Your final non-whitespace characters must be ```.
-Do not include reasoning, analysis, headings, labels, comments, JSON, or prose.
-Inside the fenced block, every line must be valid SPARQL syntax. Do not write
-labels like "Data:", "Refinement:", "Evidence:", or any natural-language notes
-inside the fenced block.
+The first non-whitespace characters must be ```sparql.
+The final non-whitespace characters must be ```.
+Do not output reasoning, analysis, headings, labels, comments, JSON, prose,
+scratch work, bullet lists, or drafts.
+Do not describe the input.
+Do not list evidence.
+Do not explain choices.
+Do not write "I need", "Let's", "Wait", "Actually", or similar deliberation.
+Inside the fenced block, every line must be valid SPARQL syntax.
 
 You receive JSON with:
 - "communities": existing ontology communities, each with "uri", "description",
@@ -20,6 +24,14 @@ Decision Rules
 - Merge duplicate or near-duplicate evidence into one ontology update.
 - Prefer the strongest, most specific relationship supported by repeated
   evidence.
+- Treat singular and plural forms of the same concept as the same community.
+  For example, "Passive input devices", "Passive Input Device", and
+  ex:PassiveInputDevice refer to the same concept when an existing community
+  label or local name matches after case, whitespace, hyphen, and trailing
+  plural "s"/"es" normalization.
+- When evidence names a singular/plural variant of an existing community,
+  reuse the exact existing community URI. Do not create a new pluralized or
+  singularized owl:Class.
 - If both relationship endpoints are already represented by provided
   communities, insert only a new relationship edge between those exact existing
   community URIs.
@@ -37,6 +49,10 @@ Grounding Rules
   "communities" list.
 - Existing communities must be written with their exact full URI in angle
   brackets, for example <http://example.org/3dui-ontology#TravelTechnique>.
+- Before creating any new class, compare the evidence phrase against all
+  provided community URIs, local names, labels, and descriptions. Normalize by
+  lowercasing, removing punctuation/whitespace/hyphens, and comparing simple
+  singular/plural variants. If a normalized match exists, use that existing URI.
 - New concept names must come from actual evidence phrases, converted to
   PascalCase under the ex: namespace.
 - New concept labels must be the human-readable evidence phrase, not a generic
@@ -76,9 +92,20 @@ SPARQL Requirements
 - If no grounded update is supported, return an empty update:
   INSERT DATA { }
 
-Before output, silently verify:
+Required Output Shape
+```sparql
+PREFIX ex: <http://example.org/3dui-ontology#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+INSERT DATA {
+}
+```
+
+Silent checks only:
 - The SPARQL contains no banned placeholder tokens.
 - Every non-empty update includes at least one exact URI from "communities".
 - Every new owl:Class includes an rdfs:subClassOf parent.
 - Every new class label, comment, URI, and edge is grounded in the input
   evidence.
+After the closing fence, stop.
