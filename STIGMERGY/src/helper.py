@@ -10,6 +10,7 @@ from rdflib.namespace import OWL, RDFS
 from src.config import NEW_EVIDENCE_PERSISTENCE, PHEROMONE_SPARQL_GENERATION_MINIMUM
 from src.generate_sparQL import (
     _extract_sparql_update,
+    blackboard_paths,
     retrieve_blurbs,
     strongest_communities,
 )
@@ -108,24 +109,44 @@ def _execute_sparQL_command(
     g.serialize(destination=output_path, format="ttl")
     return output_path
 
-def _generate_sparQL():
+def _generate_sparQL(blackboard_path=None):
     user_input = input("Generate hypothesis and proposed relations? (y/n): ")
     user_input = user_input.strip().lower()
 
     if user_input == "y":
-        communities = strongest_communities(minimum=PHEROMONE_SPARQL_GENERATION_MINIMUM, k=3)
-        sparql_command = retrieve_blurbs(communities=communities)
-        try:
-            _execute_sparQL_command(
-                ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
-                command=sparql_command
-            )
-        except InconsistentUpdateError as error:
-            print(f"SPARQL update rejected (ontology left unchanged):\n {error}")
-            print(f"Offending SPARQL:\n {sparql_command}")
+        paths = blackboard_paths(blackboard_path)
+        if not paths:
+            print("No blackboard files found; skipping SPARQL generation.")
             return
 
-        print(f"SPARQL commands:\n {sparql_command}")
+        generated_count = 0
+        for path in paths:
+            communities = strongest_communities(
+                minimum=PHEROMONE_SPARQL_GENERATION_MINIMUM,
+                k=3,
+                blackboard_path=path,
+            )
+            if not communities:
+                print(f"No qualifying communities in {path}; skipping.")
+                continue
+
+            print(f"Generating SPARQL from {path}")
+            sparql_command = retrieve_blurbs(communities=communities)
+            try:
+                _execute_sparQL_command(
+                    ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
+                    command=sparql_command
+                )
+            except InconsistentUpdateError as error:
+                print(f"SPARQL update rejected for {path} (ontology left unchanged):\n {error}")
+                print(f"Offending SPARQL:\n {sparql_command}")
+                continue
+
+            generated_count += 1
+            print(f"SPARQL commands from {path}:\n {sparql_command}")
+
+        if generated_count == 0:
+            print("No SPARQL commands were generated.")
 
     elif user_input == "n":
         raise SystemExit(0)

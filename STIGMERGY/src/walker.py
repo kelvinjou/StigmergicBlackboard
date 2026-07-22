@@ -34,32 +34,48 @@ from src.walk_strategies import (
     _starting_community,
 )
 
-COUNTER = 1
-BLACKBOARD = Path(f"_raw_outputs/bb{COUNTER}.jsonl") # using jsonl b/c this file is continuously being updated. If using JSON, you must load the whole thing
+BLACKBOARD_DIR = Path("_raw_outputs")
 
 EX = Namespace("http://example.org/3dui-ontology#")
 
-def _decay_blackboard_strengths(decay=None):
+def _blackboard_path(evidence_index: int) -> Path:
+    return BLACKBOARD_DIR / f"bb{evidence_index}.jsonl"
+
+
+def _reset_blackboard(blackboard_path: Path):
+    blackboard_path.parent.mkdir(parents=True, exist_ok=True)
+    blackboard_path.write_text("", encoding="utf8")
+
+
+def _decay_blackboard_strengths(blackboard_path: Path, decay=None):
     """Evaporate pheromone (tau) once per trial: tau <- (1 - rho) * tau."""
     if decay is None:
         decay = 1.0 - config.EVAPORATION_RATE
-    blackboard_items = _load_blackboard_items(BLACKBOARD)
+    blackboard_items = _load_blackboard_items(blackboard_path)
 
     for item in blackboard_items.values():
         item["strength"] *= decay
 
-    _write_blackboard_items(BLACKBOARD, blackboard_items)
+    _write_blackboard_items(blackboard_path, blackboard_items)
 
 
-def _blackboard_strengths() -> dict[str, float]:
+def _blackboard_strengths(blackboard_path: Path) -> dict[str, float]:
     """{community_id: tau} snapshot the walk reads to bias the next step."""
     return {
         community_id: item.get("strength", 0.0)
-        for community_id, item in _load_blackboard_items(BLACKBOARD).items()
+        for community_id, item in _load_blackboard_items(blackboard_path).items()
     }
 
 
-def _append_blackboard_blurb(community_id, community, heuristic, path_confidence, evidence, blurb):
+def _append_blackboard_blurb(
+    blackboard_path,
+    community_id,
+    community,
+    heuristic,
+    path_confidence,
+    evidence,
+    blurb,
+):
     """Deposit pheromone and record the blurb.
 
     tau (item["strength"]) is the LEARNED pheromone. It is deliberately NOT the
@@ -68,7 +84,7 @@ def _append_blackboard_blurb(community_id, community, heuristic, path_confidence
     accumulation ACROSS different evidence stays the real signal. eta (the raw
     embedding score) is kept per-blurb under "heuristic".
     """
-    blackboard_items = _load_blackboard_items(BLACKBOARD)
+    blackboard_items = _load_blackboard_items(blackboard_path)
 
     if community_id not in blackboard_items:
         blackboard_items[community_id] = {
@@ -103,7 +119,7 @@ def _append_blackboard_blurb(community_id, community, heuristic, path_confidence
             "deposit": deposit,
         }
     )
-    _write_blackboard_items(BLACKBOARD, blackboard_items)
+    _write_blackboard_items(blackboard_path, blackboard_items)
 
 def _generate_llm_relational_description(ontology, evidence):
     llm = LMStudioLLM() # swap with NVIDIANIMLLM if needed
@@ -126,6 +142,7 @@ def _compare_similarity_at_walk(
     current_community,
     evidence_text,
     evidence_embedding,
+    blackboard_path,
     path_confidence=1.0,
     semantic_weight=None,
 ):
@@ -168,6 +185,7 @@ def _compare_similarity_at_walk(
 
 
             _append_blackboard_blurb(
+                blackboard_path=blackboard_path,
                 community_id=str(current_community),
                 community=community,
                 heuristic=heuristic,
@@ -180,8 +198,6 @@ def _compare_similarity_at_walk(
 # Random-walk orchestration. 
 # walk now owns the evidence loop
 def walk(trial_count=5, steps_per_trial=10):
-    global COUNTER, BLACKBOARD
-
     walk_options = [
         ("top down", _direct_child_walk, config.TOP_DOWN_WEIGHT),
         ("adjacent", _adjacent_walk, config.ADJACENT_WEIGHT),
@@ -193,12 +209,16 @@ def walk(trial_count=5, steps_per_trial=10):
         SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed
     ):
         summaries = pickle.load(sum_embed)
-        for evidence_text, evidence_embedding in zip(
+        for evidence_index, (evidence_text, evidence_embedding) in enumerate(zip(
             summaries["descriptions"],
             summaries["embeddings"]
-        ):
+        ), start=1):
+            blackboard_path = _blackboard_path(evidence_index)
+            _reset_blackboard(blackboard_path)
+            print(f"\nEvidence {evidence_index}: writing blackboard to {blackboard_path}")
+
             for trial in range(1, trial_count + 1):
-                _decay_blackboard_strengths()
+                _decay_blackboard_strengths(blackboard_path)
 
                 # current_community = _starting_community()
                 current_community = _starting_community(evidence_embedding)
@@ -214,6 +234,7 @@ def walk(trial_count=5, steps_per_trial=10):
                         current_community=current_community,
                         evidence_text=evidence_text,
                         evidence_embedding=evidence_embedding,
+                        blackboard_path=blackboard_path,
                         path_confidence=path_confidence,
                     )
 
@@ -225,7 +246,7 @@ def walk(trial_count=5, steps_per_trial=10):
                         next_community = _pheromone_biased_walk(
                             current_community,
                             evidence_embedding,
-                            _blackboard_strengths(),
+                            _blackboard_strengths(blackboard_path),
                         )
                     else:
                         # ablation: fixed-weight strategy + uniform-random node
@@ -257,11 +278,9 @@ def walk(trial_count=5, steps_per_trial=10):
                     current_community=current_community,
                     evidence_text=evidence_text,
                     evidence_embedding=evidence_embedding,
+                    blackboard_path=blackboard_path,
                     path_confidence=config.PATH_CONFIDENCE_DECAY ** steps_per_trial,
                 )
-
-            # incrementing count so that each evidence starts off with unique blackboard
-            COUNTER += 1
     
 if __name__ == "__main__":
     start = time.time()

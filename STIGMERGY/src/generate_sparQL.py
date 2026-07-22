@@ -18,29 +18,52 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from llm.lmstudio_llm import LMStudioLLM
 
-BLACKBOARD_PATH = PROJECT_ROOT / "_raw_outputs/blackboard.jsonl"
+BLACKBOARD_DIR = PROJECT_ROOT / "_raw_outputs"
 SPARQL_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "llm/prompts/sparQL_generation_sys_prompt.md"
 SPARQL_FENCE_PATTERN = re.compile(r"(?is)```sparql\s*(.*?)\s*```")
 PREFIX_PATTERN = re.compile(r"(?im)^\s*PREFIX\s+\w+:\s*<[^>]+>\s*$")
 INSERT_PATTERN = re.compile(r"(?i)INSERT\s+DATA\s*\{")
 
-# apply minimum strength filtering then get top K
-def strongest_communities(minimum: float, k: int) -> list[dict]:
-    with open(BLACKBOARD_PATH, "r", encoding="utf-8") as file:
-        # filter out commnuities with low strength
-        qualifiers = (
-            record
-            for line in file
-            if line.strip()
-            and (record := json.loads(line))["strength"] >= minimum
-        )
 
-        # get top K
-        return heapq.nlargest(
-            k,
-            qualifiers,
-            key=lambda record: record["strength"],
-        )
+def _blackboard_sort_key(path: Path) -> tuple[int, str]:
+    match = re.fullmatch(r"bb(\d+)\.jsonl", path.name)
+    if match:
+        return int(match.group(1)), path.name
+    return sys.maxsize, path.name
+
+
+def _blackboard_paths(blackboard_path: str | Path | None) -> list[Path]:
+    if blackboard_path is not None:
+        return [Path(blackboard_path)]
+    return sorted(BLACKBOARD_DIR.glob("bb*.jsonl"), key=_blackboard_sort_key)
+
+
+def blackboard_paths(blackboard_path: str | Path | None = None) -> list[Path]:
+    return _blackboard_paths(blackboard_path)
+
+
+# apply minimum strength filtering then get top K
+def strongest_communities(
+    minimum: float,
+    k: int,
+    blackboard_path: str | Path | None = None,
+) -> list[dict]:
+    qualifiers = []
+    for path in _blackboard_paths(blackboard_path):
+        with path.open("r", encoding="utf-8") as file:
+            for line in file:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                if record["strength"] >= minimum:
+                    record["blackboard_path"] = str(path)
+                    qualifiers.append(record)
+
+    return heapq.nlargest(
+        k,
+        qualifiers,
+        key=lambda record: record["strength"],
+    )
     
 # a blank new LLM call per K community, and return SparQL command string
 def retrieve_blurbs(communities: list[dict]) -> str:
@@ -55,6 +78,7 @@ def retrieve_blurbs(communities: list[dict]) -> str:
             "uri": community["community_id"],
             "description": community["community"],
             "strength": community["strength"],
+            "blackboard_path": community.get("blackboard_path"),
         }
         for community in communities
     ]
