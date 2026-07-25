@@ -13,6 +13,9 @@ Inside the fenced block, every line must be valid SPARQL syntax.
 You receive JSON with:
 - "communities": existing ontology communities, each with "uri", "description",
   and "strength".
+- "object_properties": declared ontology owl:ObjectProperty predicates, keyed by
+  URI, with labels, comments, domains, ranges, superproperties, and inverses
+  when available.
 - "evidence": candidate relationship statements generated from source evidence.
 
 Your task is to curate the evidence into a concrete SPARQL UPDATE that extends
@@ -32,9 +35,12 @@ Decision Rules
   reuse the exact existing community URI. Do not create a new pluralized or
   singularized owl:Class.
 - If both relationship endpoints are already represented by provided
-  communities, insert only a new relationship edge between those exact existing
-  community URIs. Never add, change, or repeat an rdfs:subClassOf triple on a
-  community that already exists; existing classes keep their current parent.
+  communities, insert a relationship edge between those exact existing
+  community URIs. If the chosen predicate is not already listed in
+  "object_properties", also declare that predicate as an owl:ObjectProperty in
+  the same INSERT DATA block. Never add, change, or repeat an rdfs:subClassOf
+  triple on a community that already exists; existing classes keep their current
+  parent.
 - If one endpoint is represented by a provided community and the other endpoint
   is a meaningful missing concept from the evidence, create the missing concept
   as a new owl:Class, place it in the class hierarchy with rdfs:subClassOf,
@@ -71,9 +77,18 @@ Grounding Rules
   ontology rather than forcing an ill-fitting parent.
 - Do not make a caused or affected concept a subclass of the concept that causes
   or produces it; connect them with the causal relationship edge instead.
-- Predicates must come from the evidence relationship, converted to lowerCamelCase
-  under the ex: namespace, such as ex:causes, ex:supports, ex:requires, or
-  ex:contradicts.
+- Relationship predicates must be `owl:ObjectProperty` predicates.
+- Prefer an existing predicate from `"object_properties"` when its URI local name,
+  label, comment, domain, or range fits the evidence relationship.
+- When reusing an existing predicate, write its exact URI; use angle brackets for
+  full URIs.
+- Create a new predicate only when no existing object property fits.
+- Any new predicate must be declared in the same `INSERT DATA` block as an
+  `owl:ObjectProperty`, with an evidence-grounded `rdfs:label` and
+  `rdfs:comment`; include `rdfs:domain` and `rdfs:range` when the endpoints are
+  clear.
+- New predicate names must come from the evidence relationship and be converted
+  to lowerCamelCase under the `ex:` namespace.
 
 Class Hierarchy Integrity (disjointness)
 - rdfs:subClassOf means "is a kind of", not "is related to". Only use it when the
@@ -91,7 +106,7 @@ Class Hierarchy Integrity (disjointness)
   artifact it uses.
 - Example (abstract): if evidence says a concept in category A "supports" a
   concept in category B, emit
-  <existing-A-uri> ex:supports <existing-B-uri>, and do NOT add
+  <existing-A-uri> <declared-object-property-uri> <existing-B-uri>, and do NOT add
   rdfs:subClassOf <existing-B-uri> to the category-A concept.
 
 Hard Bans
@@ -134,6 +149,8 @@ Silent checks only:
   placed under two disjoint top-level categories.
 - No rdfs:subClassOf is used where the relationship is a mere association between
   concepts of different categories.
+- Every predicate used between two class/community resources is either listed in
+  "object_properties" or declared in this INSERT DATA block as owl:ObjectProperty.
 - Every new class label, comment, URI, and edge is grounded in the input
   evidence.
 After the closing fence, stop.

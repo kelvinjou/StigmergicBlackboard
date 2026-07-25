@@ -10,8 +10,10 @@
 from pathlib import Path
 import json
 import heapq
+import pickle
 import re
 import sys
+from src.preprocessing import ONTOLOGY_EMBEDDING_CACHE_PATH
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -83,6 +85,11 @@ def retrieve_blurbs(communities: list[dict]) -> str:
         for community in communities
     ]
 
+    with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as file:
+        ontology_cache = pickle.load(file)
+
+    object_properties = ontology_cache.get("object_properties", {})
+
     agent = LMStudioLLM(
         system_prompt_path=SPARQL_SYSTEM_PROMPT_PATH,
         response_format=False,
@@ -92,6 +99,7 @@ def retrieve_blurbs(communities: list[dict]) -> str:
         json.dumps(
             {
                 "communities": community_context,
+                "object_properties": object_properties,
                 "evidence": text_evidence,
             },
             ensure_ascii=True,

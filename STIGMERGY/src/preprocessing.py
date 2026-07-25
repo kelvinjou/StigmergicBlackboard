@@ -2,7 +2,7 @@ from functools import cache
 from pathlib import Path
 import pickle
 
-from rdflib import Graph, URIRef
+from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import OWL, RDF, RDFS
 from sentence_transformers import SentenceTransformer
 import hnswlib
@@ -50,6 +50,29 @@ def _ontology_embedding_similarity():
             for subject, label in graph.subject_objects(RDFS.label)
         }
 
+        annotation_predicates = {
+            RDFS.label,
+            RDFS.comment,
+        }
+
+        object_properties = set(graph.subjects(RDF.type, OWL.ObjectProperty))
+
+        object_property_metadata = {
+            str(prop): {
+                "label": labels.get(prop, graph.namespace_manager.normalizeUri(prop)),
+                "comments": [str(comment) for comment in graph.objects(prop, RDFS.comment)],
+                "domains": [str(domain) for domain in graph.objects(prop, RDFS.domain)],
+                "ranges": [str(range_) for range_ in graph.objects(prop, RDFS.range)],
+                "superproperties": [
+                    str(parent) for parent in graph.objects(prop, RDFS.subPropertyOf)
+                ],
+                "inverse_of": [
+                    str(inverse) for inverse in graph.objects(prop, OWL.inverseOf)
+                ],
+            }
+            for prop in object_properties
+        }
+
         def _name(node):
             if node in labels:
                 return labels[node]
@@ -84,9 +107,21 @@ def _ontology_embedding_similarity():
                     structure_lines.append(
                         f"{_name(subject)} {_name(predicate)} {_name(obj)}."
                     )
-            structure_contexts.append(" ".join(sorted(structure_lines)))
 
-        return communities, semantic_contexts, structure_contexts
+                # add object-property relationships explicitly inside per-community loop extraction
+                if predicate in object_properties:
+                    structure_lines.append(
+                        f"{_name(subject)} has object property {_name(predicate)}"
+                    )
+            for subject, predicate, obj in graph.triples((None, None, community)):
+                if predicate in object_properties:
+                    structure_lines.append(
+                        f"{_name(subject)} has object property {_name(predicate)}"
+                    )
+
+            structure_contexts.append(" ".join(sorted(set(structure_lines))))
+
+        return communities, semantic_contexts, structure_contexts, object_property_metadata
 
         """ prior to 07/10/26 """
         """
@@ -120,7 +155,7 @@ def _ontology_embedding_similarity():
 
         return communities, community_contexts
         """
-    community_uris, semantic_descriptions, structure_descriptions = (
+    community_uris, semantic_descriptions, structure_descriptions, object_property_metadata = (
         _extract_TTL_community_context()
     )
 
@@ -184,6 +219,7 @@ def _ontology_embedding_similarity():
             "model": EMBEDDING_MODEL_NAME,
             "uris": [str(uri) for uri in community_uris],
             "items": items,
+            "object_properties": object_property_metadata
         }
 
         ONTOLOGY_EMBEDDING_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -206,6 +242,7 @@ def _ontology_embedding_similarity():
                 for uri in community_uris
                 if str(uri) in cached.get("items", {})
             ] == structure_descriptions
+            and cached.get("object_properties") == object_property_metadata
         ): # no change, just load embeddings from cache
             if not ONTOLOGY_HNSW_INDEX_PATH.exists():
                 semantic_embeddings = np.array(
