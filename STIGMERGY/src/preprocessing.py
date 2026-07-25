@@ -34,7 +34,7 @@ def _ontology_embedding_similarity():
         Subclass of: Domain Concept
         Relation: Evaluation Method | owl:disjointWith | Design Principle
         Relation: Evaluation Method | rdf:type | owl:Class """
-    def _extract_TTL_community_context() -> tuple[list[URIRef], list[str], list[str]]:
+    def _extract_TTL_community_context() -> tuple[list[URIRef], list[str], list[str], dict[str, dict[str, list[str]]]]:
         graph = Graph()
         graph.parse(MAIN_ONTOLOGY, format="ttl")
 
