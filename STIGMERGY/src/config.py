@@ -1,3 +1,5 @@
+from pathlib import Path
+
 """
 Central configuration for the stigmergic walk.
 
@@ -16,6 +18,75 @@ stigmergic: the trace left on the blackboard (tau) feeds back into future
 walks. Set PHEROMONE_BIAS_ENABLED = False to recover the original uniform
 random walk (the "no-bias" ablation).
 """
+
+# --- Ontology selection -----------------------------------------------------
+# Switch these values when running against a different ontology.
+MAIN_ONTOLOGY = Path("/Users/kelvinjou/Downloads/schema_org.ttl")
+ONTOLOGY_FORMAT = "ttl"
+SUMMARY = Path("_raw_inputs/summary.txt")
+OUTPUT_ONTOLOGY = Path("_raw_outputs/modified_schema_org.ttl")
+
+ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
+ONTOLOGY_HNSW_INDEX_PATH = Path("_preprocessed/community_hnsw.bin")
+SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
+
+# Namespace used for newly generated classes/properties and SPARQL prefixes.
+ONTOLOGY_NAMESPACE_PREFIX = "schema"
+ONTOLOGY_NAMESPACE_URI = "https://schema.org/"
+ONTOLOGY_ROOT_CLASS_URI = "https://schema.org/Thing"
+
+# THESE CAN STAY BROAD, DO NOT UPDATE ANYTHING UNDERNEATH HERE FOR OWL
+# Schema.org declares terms as rdf:Property and uses schema:domainIncludes /
+# schema:rangeIncludes. For an OWL-native ontology, set these to
+# owl:ObjectProperty, rdfs:domain, and rdfs:range.
+RELATIONSHIP_PROPERTY_TYPE_QNAME = "rdf:Property"
+PROPERTY_DOMAIN_PREDICATE_QNAME = "schema:domainIncludes"
+PROPERTY_RANGE_PREDICATE_QNAME = "schema:rangeIncludes"
+
+# Predicate types to treat as reusable ontology relationship properties.
+RELATIONSHIP_PROPERTY_TYPE_URIS = (
+    "http://www.w3.org/2002/07/owl#ObjectProperty",
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
+)
+
+# Domain/range predicates to read when describing existing relationship
+# properties. Includes both OWL/RDFS and Schema.org styles.
+PROPERTY_DOMAIN_PREDICATE_URIS = (
+    "http://www.w3.org/2000/01/rdf-schema#domain",
+    "https://schema.org/domainIncludes",
+)
+PROPERTY_RANGE_PREDICATE_URIS = (
+    "http://www.w3.org/2000/01/rdf-schema#range",
+    "https://schema.org/rangeIncludes",
+)
+
+SPARQL_PREFIXES = {
+    ONTOLOGY_NAMESPACE_PREFIX: ONTOLOGY_NAMESPACE_URI,
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+}
+
+
+def sparql_prefix_lines() -> list[str]:
+    return [
+        f"PREFIX {prefix}: <{namespace}>"
+        for prefix, namespace in SPARQL_PREFIXES.items()
+    ]
+
+
+def prompt_template_values() -> dict[str, str]:
+    return {
+        "ONTOLOGY_PREFIX": ONTOLOGY_NAMESPACE_PREFIX,
+        "ONTOLOGY_NAMESPACE_URI": ONTOLOGY_NAMESPACE_URI,
+        "ONTOLOGY_ROOT_CLASS_URI": ONTOLOGY_ROOT_CLASS_URI,
+        "ONTOLOGY_EXAMPLE_URI": ONTOLOGY_ROOT_CLASS_URI,
+        "RELATIONSHIP_PROPERTY_TYPE_QNAME": RELATIONSHIP_PROPERTY_TYPE_QNAME,
+        "PROPERTY_DOMAIN_PREDICATE_QNAME": PROPERTY_DOMAIN_PREDICATE_QNAME,
+        "PROPERTY_RANGE_PREDICATE_QNAME": PROPERTY_RANGE_PREDICATE_QNAME,
+        "SPARQL_PREFIX_LINES": "\n".join(sparql_prefix_lines()),
+        "SPARQL_PREFIX_LINES_INDENTED": "\n  ".join(sparql_prefix_lines()),
+    }
 
 # --- Loop closing -----------------------------------------------------------
 # True  -> next step sampled by tau^ALPHA * eta^BETA (stigmergic).

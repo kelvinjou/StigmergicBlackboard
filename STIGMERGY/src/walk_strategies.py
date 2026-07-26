@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from functools import cache
-from pathlib import Path
 import pickle
 import random
 
@@ -10,18 +11,22 @@ from rdflib.namespace import RDFS
 import hnswlib
 
 try:
-    from src.preprocessing import get_embedding_model
+    from src.preprocessing import (
+        ONTOLOGY_EMBEDDING_CACHE_PATH,
+        ONTOLOGY_HNSW_INDEX_PATH,
+        get_embedding_model,
+    )
     from src import config
 except ModuleNotFoundError:
-    from preprocessing import get_embedding_model
+    from preprocessing import (
+        ONTOLOGY_EMBEDDING_CACHE_PATH,
+        ONTOLOGY_HNSW_INDEX_PATH,
+        get_embedding_model,
+    )
     import config
 
-ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
-ONTOLOGY_HNSW_INDEX_PATH = Path("_preprocessed/community_hnsw.bin")
-
-
 g = Graph()
-g.parse("_raw_inputs/simplified_xr.ttl", format="ttl")
+g.parse(config.MAIN_ONTOLOGY, format=config.ONTOLOGY_FORMAT)
 RNG = random.Random(11)
 
 
@@ -37,7 +42,7 @@ def _seed_random_comm(communities: list[URIRef]) -> URIRef:
 
 # to be deprecated, use HNSW
 def _get_communities() -> list[URIRef]:
-    concept_class = URIRef("http://example.org/3dui-ontology#Concept")
+    concept_class = URIRef(config.ONTOLOGY_ROOT_CLASS_URI)
     return [
         community
         for community in g.transitive_subjects(RDFS.subClassOf, concept_class)

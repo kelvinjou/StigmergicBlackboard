@@ -8,12 +8,14 @@ from sentence_transformers import SentenceTransformer
 import hnswlib
 import numpy as np
 
-MAIN_ONTOLOGY = Path("_raw_inputs/enhanced_xr.ttl")
-SUMMARY = Path("_raw_inputs/summary_for_xr_enhanced.txt")
+from src import config
 
-ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
-ONTOLOGY_HNSW_INDEX_PATH = Path("_preprocessed/community_hnsw.bin")
-SUMMARY_EMBEDDING_CACHE_PATH = Path("_preprocessed/summary_embeddings.pkl")
+MAIN_ONTOLOGY = config.MAIN_ONTOLOGY
+SUMMARY = config.SUMMARY
+
+ONTOLOGY_EMBEDDING_CACHE_PATH = config.ONTOLOGY_EMBEDDING_CACHE_PATH
+ONTOLOGY_HNSW_INDEX_PATH = config.ONTOLOGY_HNSW_INDEX_PATH
+SUMMARY_EMBEDDING_CACHE_PATH = config.SUMMARY_EMBEDDING_CACHE_PATH
 
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
@@ -31,14 +33,20 @@ def _ontology_embedding_similarity():
         Community: Evaluation Method
         Label: Evaluation Method
         Comment: Methodologies used to assess the usability, performance, or user experience of 3D UIs.
-        Subclass of: Domain Concept
+        Subclass of: configured root concept
         Relation: Evaluation Method | owl:disjointWith | Design Principle
         Relation: Evaluation Method | rdf:type | owl:Class """
-    def _extract_TTL_community_context() -> tuple[list[URIRef], list[str], list[str], dict[str, dict[str, list[str]]]]:
+    def _extract_TTL_community_context() -> tuple[
+        list[URIRef],
+        list[str],
+        list[str],
+        dict[str, dict[str, list[str]]],
+        list[list[str]],
+    ]:
         graph = Graph()
-        graph.parse(MAIN_ONTOLOGY, format="ttl")
+        graph.parse(MAIN_ONTOLOGY, format=config.ONTOLOGY_FORMAT)
 
-        concept_class = URIRef("http://example.org/3dui-ontology#Concept")
+        concept_class = URIRef(config.ONTOLOGY_ROOT_CLASS_URI)
         communities = [
             community
             for community in graph.transitive_subjects(RDFS.subClassOf, concept_class)
@@ -55,20 +63,50 @@ def _ontology_embedding_similarity():
             RDFS.comment,
         }
 
-        object_properties = set(graph.subjects(RDF.type, OWL.ObjectProperty))
+        property_type_uris = [
+            URIRef(uri) for uri in config.RELATIONSHIP_PROPERTY_TYPE_URIS
+        ]
+        object_properties = {
+            prop
+            for property_type in property_type_uris
+            for prop in graph.subjects(RDF.type, property_type)
+        }
+
+        domain_predicates = [
+            URIRef(uri) for uri in config.PROPERTY_DOMAIN_PREDICATE_URIS
+        ]
+        range_predicates = [
+            URIRef(uri) for uri in config.PROPERTY_RANGE_PREDICATE_URIS
+        ]
+
+        def _objects_for_any(subject, predicates):
+            return [
+                str(obj)
+                for predicate in predicates
+                for obj in graph.objects(subject, predicate)
+            ]
 
         object_property_metadata = {
             str(prop): {
                 "label": labels.get(prop, graph.namespace_manager.normalizeUri(prop)),
                 "comments": [str(comment) for comment in graph.objects(prop, RDFS.comment)],
-                "domains": [str(domain) for domain in graph.objects(prop, RDFS.domain)],
-                "ranges": [str(range_) for range_ in graph.objects(prop, RDFS.range)],
+                "domains": _objects_for_any(prop, domain_predicates),
+                "ranges": _objects_for_any(prop, range_predicates),
                 "superproperties": [
                     str(parent) for parent in graph.objects(prop, RDFS.subPropertyOf)
                 ],
                 "inverse_of": [
                     str(inverse) for inverse in graph.objects(prop, OWL.inverseOf)
                 ],
+            }
+            for prop in object_properties
+        }
+
+        property_classes = {
+            prop: {
+                obj
+                for predicate in (*domain_predicates, *range_predicates)
+                for obj in graph.objects(prop, predicate)
             }
             for prop in object_properties
         }
@@ -82,6 +120,7 @@ def _ontology_embedding_similarity():
 
         semantic_contexts = []
         structure_contexts = []
+        connected_object_properties = []
         structural_predicates = {
             RDFS.subClassOf,
             RDF.type,
@@ -100,6 +139,11 @@ def _ontology_embedding_similarity():
             semantic_contexts.append(". ".join(text_parts))
 
             structure_lines = []
+            directly_connected_properties = {
+                str(prop)
+                for prop, connected_classes in property_classes.items()
+                if community in connected_classes
+            }
             for parent in graph.objects(community, RDFS.subClassOf):
                 structure_lines.append(f"{label} is a subclass of {_name(parent)}.")
             for subject, predicate, obj in graph.triples((community, None, None)):
@@ -110,18 +154,32 @@ def _ontology_embedding_similarity():
 
                 # add object-property relationships explicitly inside per-community loop extraction
                 if predicate in object_properties:
+                    directly_connected_properties.add(str(predicate))
                     structure_lines.append(
-                        f"{_name(subject)} has object property {_name(predicate)}"
+                        f"{_name(subject)} has object property {_name(predicate)} to {_name(obj)}."
                     )
             for subject, predicate, obj in graph.triples((None, None, community)):
                 if predicate in object_properties:
+                    directly_connected_properties.add(str(predicate))
                     structure_lines.append(
-                        f"{_name(subject)} has object property {_name(predicate)}"
+                        f"{_name(subject)} has object property {_name(predicate)} to {_name(obj)}."
                     )
 
+            for prop in directly_connected_properties:
+                structure_lines.append(
+                    f"{label} is directly connected to relationship property {_name(URIRef(prop))}."
+                )
+
+            connected_object_properties.append(sorted(directly_connected_properties))
             structure_contexts.append(" ".join(sorted(set(structure_lines))))
 
-        return communities, semantic_contexts, structure_contexts, object_property_metadata
+        return (
+            communities,
+            semantic_contexts,
+            structure_contexts,
+            object_property_metadata,
+            connected_object_properties,
+        )
 
         """ prior to 07/10/26 """
         """
@@ -155,7 +213,13 @@ def _ontology_embedding_similarity():
 
         return communities, community_contexts
         """
-    community_uris, semantic_descriptions, structure_descriptions, object_property_metadata = (
+    (
+        community_uris,
+        semantic_descriptions,
+        structure_descriptions,
+        object_property_metadata,
+        connected_object_properties,
+    ) = (
         _extract_TTL_community_context()
     )
 
@@ -183,6 +247,7 @@ def _ontology_embedding_similarity():
                 "semantic_embedding": semantic_embedding,
                 "structure_description": structure_description,
                 "structure_embedding": structure_embedding,
+                "connected_object_properties": direct_object_properties,
             }
             for (
                 uri,
@@ -190,33 +255,33 @@ def _ontology_embedding_similarity():
                 semantic_embedding,
                 structure_description,
                 structure_embedding,
+                direct_object_properties,
             ) in zip(
                 community_uris,
                 semantic_descriptions,
                 semantic_embeddings,
                 structure_descriptions,
                 structure_embeddings,
+                connected_object_properties,
             )
         }
 
         """
+        Cache layout:
         {
-            "model": "BAAI/bge-small-en-v1.5",
-            "uris": [
-                "http://example.org/3dui-ontology#TravelTechnique",
-                ...
-            ],
-            "items": {
-                "http://example.org/3dui-ontology#TravelTechnique": {
-                    "description": "...",
-                    "embedding": embedding,
-                },
-                ...
-            },
+            "model": EMBEDDING_MODEL_NAME,
+            "ontology": str(MAIN_ONTOLOGY),
+            "uris": [...],
+            "items": {...},
+            "object_properties": {...},
         }
         """
         cache = {
             "model": EMBEDDING_MODEL_NAME,
+            "ontology": str(MAIN_ONTOLOGY),
+            "ontology_namespace_prefix": config.ONTOLOGY_NAMESPACE_PREFIX,
+            "ontology_namespace_uri": config.ONTOLOGY_NAMESPACE_URI,
+            "ontology_root_class_uri": config.ONTOLOGY_ROOT_CLASS_URI,
             "uris": [str(uri) for uri in community_uris],
             "items": items,
             "object_properties": object_property_metadata
@@ -231,7 +296,11 @@ def _ontology_embedding_similarity():
         with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as f:
             cached = pickle.load(f)
         if (
-            cached.get("uris") == [str(uri) for uri in community_uris]
+            cached.get("ontology") == str(MAIN_ONTOLOGY)
+            and cached.get("ontology_namespace_prefix") == config.ONTOLOGY_NAMESPACE_PREFIX
+            and cached.get("ontology_namespace_uri") == config.ONTOLOGY_NAMESPACE_URI
+            and cached.get("ontology_root_class_uri") == config.ONTOLOGY_ROOT_CLASS_URI
+            and cached.get("uris") == [str(uri) for uri in community_uris]
             and [
                 cached["items"][str(uri)].get("semantic_description")
                 for uri in community_uris
@@ -242,6 +311,11 @@ def _ontology_embedding_similarity():
                 for uri in community_uris
                 if str(uri) in cached.get("items", {})
             ] == structure_descriptions
+            and [
+                cached["items"][str(uri)].get("connected_object_properties")
+                for uri in community_uris
+                if str(uri) in cached.get("items", {})
+            ] == connected_object_properties
             and cached.get("object_properties") == object_property_metadata
         ): # no change, just load embeddings from cache
             if not ONTOLOGY_HNSW_INDEX_PATH.exists():

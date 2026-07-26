@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
@@ -5,6 +7,11 @@ from urllib.parse import urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+try:
+    from src import config
+except ModuleNotFoundError:
+    config = None
 
 
 load_dotenv()
@@ -84,7 +91,9 @@ RELATION_JUDGMENT_RESPONSE_FORMAT = {
 
 def _resolve_system_prompt(system_prompt_path: Path | None):
     if system_prompt_path is None:
-        return DEFAULT_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+        return _render_system_prompt(
+            DEFAULT_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+        )
 
     prompt = system_prompt_path.read_text(encoding="utf-8")
 
@@ -92,7 +101,16 @@ def _resolve_system_prompt(system_prompt_path: Path | None):
     if "\n" not in prompt:
         path = Path(prompt)
         if path.exists():
-            return path.read_text(encoding="utf-8")
+            return _render_system_prompt(path.read_text(encoding="utf-8"))
+    return _render_system_prompt(prompt)
+
+
+def _render_system_prompt(prompt: str) -> str:
+    if config is None:
+        return prompt
+
+    for key, value in config.prompt_template_values().items():
+        prompt = prompt.replace(f"{{{{{key}}}}}", value)
     return prompt
 
 

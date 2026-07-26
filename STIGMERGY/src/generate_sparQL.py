@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 # get strength > x, then apply top k Need a better way later on
 """
@@ -13,18 +14,17 @@ import heapq
 import pickle
 import re
 import sys
-from src.preprocessing import ONTOLOGY_EMBEDDING_CACHE_PATH
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src import config
+from src.helper import _extract_sparql_update
 from llm.lmstudio_llm import LMStudioLLM
 
 BLACKBOARD_DIR = PROJECT_ROOT / "_raw_outputs"
+ONTOLOGY_EMBEDDING_CACHE_PATH = config.ONTOLOGY_EMBEDDING_CACHE_PATH
 SPARQL_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "llm/prompts/sparQL_generation_sys_prompt.md"
-SPARQL_FENCE_PATTERN = re.compile(r"(?is)```sparql\s*(.*?)\s*```")
-PREFIX_PATTERN = re.compile(r"(?im)^\s*PREFIX\s+\w+:\s*<[^>]+>\s*$")
-INSERT_PATTERN = re.compile(r"(?i)INSERT\s+DATA\s*\{")
 
 
 def _blackboard_sort_key(path: Path) -> tuple[int, str]:
@@ -66,6 +66,39 @@ def strongest_communities(
         qualifiers,
         key=lambda record: record["strength"],
     )
+
+
+def _object_properties_for_communities(
+    ontology_cache: dict,
+    communities: list[dict],
+) -> dict:
+    all_object_properties = ontology_cache.get("object_properties", {})
+    selected_community_ids = {
+        community["community_id"]
+        for community in communities
+    }
+
+    connected_property_uris = {
+        property_uri
+        for community_id in selected_community_ids
+        for property_uri in ontology_cache
+        .get("items", {})
+        .get(community_id, {})
+        .get("connected_object_properties", [])
+    }
+
+    if not connected_property_uris:
+        for property_uri, metadata in all_object_properties.items():
+            domains = set(metadata.get("domains", []))
+            ranges = set(metadata.get("ranges", []))
+            if selected_community_ids & (domains | ranges):
+                connected_property_uris.add(property_uri)
+
+    return {
+        property_uri: all_object_properties[property_uri]
+        for property_uri in sorted(connected_property_uris)
+        if property_uri in all_object_properties
+    }
     
 # a blank new LLM call per K community, and return SparQL command string
 def retrieve_blurbs(communities: list[dict]) -> str:
@@ -88,18 +121,31 @@ def retrieve_blurbs(communities: list[dict]) -> str:
     with ONTOLOGY_EMBEDDING_CACHE_PATH.open("rb") as file:
         ontology_cache = pickle.load(file)
 
-    object_properties = ontology_cache.get("object_properties", {})
+    object_properties = _object_properties_for_communities(
+        ontology_cache=ontology_cache,
+        communities=communities,
+    )
 
     agent = LMStudioLLM(
         system_prompt_path=SPARQL_SYSTEM_PROMPT_PATH,
         response_format=False,
         formatter=None,
     )
+
     response = agent.send_messages(
         json.dumps(
             {
+                "ontology_config": {
+                    "namespace_prefix": config.ONTOLOGY_NAMESPACE_PREFIX,
+                    "namespace_uri": config.ONTOLOGY_NAMESPACE_URI,
+                    "root_class_uri": config.ONTOLOGY_ROOT_CLASS_URI,
+                    "relationship_property_type": config.RELATIONSHIP_PROPERTY_TYPE_QNAME,
+                    "property_domain_predicate": config.PROPERTY_DOMAIN_PREDICATE_QNAME,
+                    "property_range_predicate": config.PROPERTY_RANGE_PREDICATE_QNAME,
+                    "sparql_prefixes": config.sparql_prefix_lines(),
+                },
                 "communities": community_context,
-                "object_properties": object_properties,
+                # "object_properties": object_properties,
                 "evidence": text_evidence,
             },
             ensure_ascii=True,
@@ -116,42 +162,6 @@ def retrieve_blurbs(communities: list[dict]) -> str:
 
 def _format_sparql_response(response: str) -> str:
     return f"```sparql\n{_extract_sparql_update(response)}\n```"
-
-
-def _extract_sparql_update(response: str) -> str:
-    fence_match = SPARQL_FENCE_PATTERN.search(response)
-    if fence_match:
-        response = fence_match.group(1)
-
-    prefixes = [match.group(0).strip() for match in PREFIX_PATTERN.finditer(response)]
-    insert_block = _extract_insert_data_block(response)
-    if not insert_block:
-        return "INSERT DATA { }"
-
-    sparql = "\n".join([*dict.fromkeys(prefixes), "", insert_block]).strip()
-    return re.sub(r"<(ex:[^>]+)>", r"\1", sparql)
-
-
-def _extract_insert_data_block(text: str) -> str | None:
-    match = INSERT_PATTERN.search(text)
-    if not match:
-        return None
-
-    start = match.start()
-    brace_start = text.find("{", match.end() - 1)
-    if brace_start == -1:
-        return None
-
-    depth = 0
-    for index in range(brace_start, len(text)):
-        char = text[index]
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return text[start:index + 1].strip()
-    return None
         
 
 

@@ -36,7 +36,7 @@ from src.walk_strategies import (
 
 BLACKBOARD_DIR = Path("_raw_outputs")
 
-EX = Namespace("http://example.org/3dui-ontology#")
+EX = Namespace(config.ONTOLOGY_NAMESPACE_URI)
 
 def _blackboard_path(evidence_index: int) -> Path:
     return BLACKBOARD_DIR / f"bb{evidence_index}.jsonl"
@@ -287,7 +287,7 @@ if __name__ == "__main__":
     # _ontology_embedding_similarity()
     # _summary_embedding_similarity()
 
-    # concept_class = URIRef("http://example.org/3dui-ontology#Task")
+    # concept_class = URIRef(config.ONTOLOGY_ROOT_CLASS_URI)
     # print(_adjacent_walk(concept_class))
 
     walk(trial_count=3, steps_per_trial=10)
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 Community: Task
 Label: Task
 Comment: A unit of work that a user seeks to accomplish within a 3D user interface.
-Subclass of: Domain Concept
+Subclass of: configured root concept
 Relation: Task | owl:disjointWith | Design Principle
 Relation: Task | owl:disjointWith | Evaluation Method
 Relation: Task | owl:disjointWith | UI Component

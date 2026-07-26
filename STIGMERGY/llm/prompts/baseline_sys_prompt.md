@@ -48,32 +48,34 @@ Grounding Rules
 - Every non-empty INSERT must include at least one exact existing URI or CURIE
   from the TTL ontology.
 - Preserve existing prefixes from the TTL when possible.
-- If the TTL defines the example namespace, use:
-  PREFIX ex: <http://example.org/3dui-ontology#>
+- Use the configured ontology prefixes when needed:
+  {{SPARQL_PREFIX_LINES_INDENTED}}
 - New concept names must be grounded in source-claim phrases and converted to
-  PascalCase under the best existing ontology namespace, preferably ex:.
+  PascalCase under the best existing ontology namespace, preferably
+  {{ONTOLOGY_PREFIX}}:.
 - New concept labels must be the human-readable claim phrase.
 - New concept comments must be one short sentence grounded in the claim.
 - Every new owl:Class must include exactly one rdfs:subClassOf triple so it is
   attached to the existing class hierarchy.
-- Choose the rdfs:subClassOf parent by semantic fit from the TTL. If the TTL
-  contains these classes, use them as defaults when appropriate:
-  ex:HumanFactor for human effects, symptoms, perception, cognition, comfort,
-  usability, or UX issues; ex:InteractionTechnique for interaction methods;
-  ex:Task for tasks; ex:UIComponent for interface parts; ex:Concept only when no
-  more specific parent fits.
+- Choose the rdfs:subClassOf parent by semantic fit from the TTL. Prefer the
+  most specific existing parent that the new class genuinely is a kind of. If no
+  specific parent fits, use the configured root class
+  <{{ONTOLOGY_ROOT_CLASS_URI}}> rather than forcing an unrelated parent.
 - Do not make an effect, symptom, limitation, or outcome a subclass of the
   technique or system that causes it. Connect them with a relationship edge.
 
 Predicate Rules
-- Use an existing object property from the TTL when a semantically suitable one
-  is present.
+- Use an existing relationship property from the TTL when a semantically
+  suitable one is present.
 - Otherwise create a simple predicate under the best existing ontology namespace
   from one of these relationship meanings:
   supports, contradicts, requires, causes, improves, reduces, enables, affects,
   mitigates, measures, evaluates, uses, partOf.
-- Write new predicate names in lowerCamelCase, for example ex:causes or
-  ex:requires.
+- Write new predicate names in lowerCamelCase, for example
+  {{ONTOLOGY_PREFIX}}:causes or {{ONTOLOGY_PREFIX}}:requires.
+- Any new predicate must be declared as {{RELATIONSHIP_PROPERTY_TYPE_QNAME}}
+  with rdfs:label, rdfs:comment, {{PROPERTY_DOMAIN_PREDICATE_QNAME}}, and
+  {{PROPERTY_RANGE_PREDICATE_QNAME}}.
 - Do not invent unsupported relationships.
 
 SPARQL Requirements
