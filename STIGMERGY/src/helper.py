@@ -1,3 +1,11 @@
+"""Shared pipeline helpers, including traceable SPARQL update execution.
+
+Accepted ontology updates can optionally be tied back to their originating
+blackboard evidence. When a blackboard path and selected communities are passed
+to ``_execute_sparQL_command``, every newly added RDF triple is written to a
+JSONL provenance sidecar beside the generated Turtle file.
+"""
+
 from contextlib import contextmanager
 from datetime import datetime
 import json
@@ -13,6 +21,7 @@ from pyparsing import ParseException
 from src import config
 from src.config import NEW_EVIDENCE_PERSISTENCE, PHEROMONE_SPARQL_GENERATION_MINIMUM
 from src.preprocessing import MAIN_ONTOLOGY
+from src.provenance import write_update_provenance
 
 SPARQL_FENCE_PATTERN = re.compile(r"(?is)```sparql\s*(.*?)\s*```")
 PREFIX_PATTERN = re.compile(r"(?im)^\s*PREFIX\s+\w+:\s*<[^>]+>\s*$")
@@ -286,13 +295,16 @@ def _execute_sparQL_command(
     ttl_path,
     command,
     output_path=None,
+    blackboard_path=None,
+    communities=None,
 ):
     g = Graph()
     if output_path is None:
         output_path = config.OUTPUT_ONTOLOGY
     output_path = Path(output_path)
 
-    if NEW_EVIDENCE_PERSISTENCE and output_path.exists():
+    continuing_existing_output = NEW_EVIDENCE_PERSISTENCE and output_path.exists()
+    if continuing_existing_output:
         g.parse(output_path, format=config.ONTOLOGY_FORMAT)
         # update community embedding and also HNSW 
 
@@ -300,6 +312,7 @@ def _execute_sparQL_command(
         g.parse(ttl_path, format=config.ONTOLOGY_FORMAT)
     # Snapshot pre-existing violations so the guard only rejects NEW ones the
     # update introduces, never inconsistencies already baked into the ontology.
+    before_triples = set(g)
     before = _disjointness_violations(g)
     try:
         command = _extract_sparql_update(command)
@@ -320,9 +333,19 @@ def _execute_sparQL_command(
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
-
     g.serialize(destination=output_path, format="ttl")
+
+    if blackboard_path is not None:
+        write_update_provenance(
+            output_path=output_path,
+            blackboard_path=blackboard_path,
+            evidence_row=_evidence_row_from_blackboard_path(blackboard_path),
+            communities=communities or [],
+            command=command,
+            added_triples=set(g) - before_triples,
+            reset=not continuing_existing_output,
+        )
+
     return output_path
 
 def _generate_sparQL(blackboard_path=None):
@@ -368,7 +391,9 @@ def _generate_sparQL(blackboard_path=None):
             try:
                 _execute_sparQL_command(
                     ttl_path=str(MAIN_ONTOLOGY), # run the sparQL command on the original ontology we preprocessed
-                    command=sparql_command
+                    command=sparql_command,
+                    blackboard_path=path,
+                    communities=communities,
                 )
             except InconsistentUpdateError as error:
                 print(f"SPARQL update rejected for {path} (ontology left unchanged):\n {error}")
