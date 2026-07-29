@@ -14,7 +14,7 @@ if __name__ == "__main__":
         # with timed_stage("Summary preprocessing"):
         #     _summary_embedding_similarity()
 
-        with timed_stage("Blackboard walk"):
+        with timed_stage("Generate Blackboard + Walk"):
             walk(trial_count=3, steps_per_trial=5) # number of steps do not include the HNSW entry point community
 
         with timed_stage("SPARQL generation"):
