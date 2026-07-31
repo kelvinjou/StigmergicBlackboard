@@ -22,7 +22,7 @@ from src import config
 from src.helper import _extract_sparql_update
 from llm.lmstudio_llm import LMStudioLLM
 
-BLACKBOARD_DIR = PROJECT_ROOT / "_raw_outputs"
+BLACKBOARD_DIR = PROJECT_ROOT / config.run_output_dir()
 ONTOLOGY_EMBEDDING_CACHE_PATH = config.ONTOLOGY_EMBEDDING_CACHE_PATH
 SPARQL_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "llm/prompts/sparQL_generation_sys_prompt.md"
 
@@ -57,6 +57,16 @@ def strongest_communities(
                 if not line.strip():
                     continue
                 record = json.loads(line)
+                # Skip records that carry a pheromone trail (tau) but no blurb
+                # for this evidence row. These appear only under
+                # PHEROMONE_BLACKBOARD_PERSISTENCE: a community's tau is seeded
+                # forward from prior evidence, but if the walk never actually
+                # visited/blurbed it this evidence there is no claim text to feed
+                # SPARQL generation. Selecting it would emit an empty-context
+                # update. Arms without persistence are unaffected (every record
+                # they write has a blurb).
+                if not record.get("blurb"):
+                    continue
                 if record["strength"] >= minimum:
                     record["blackboard_path"] = str(path)
                     qualifiers.append(record)

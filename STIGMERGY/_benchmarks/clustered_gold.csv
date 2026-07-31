@@ -1,0 +1,7 @@
+cluster_id,concept,evidence_rows,gold_subject,gold_predicate,gold_object,predicate_kind,expect_edge,notes
+C1,high-sodium diet causes hypertension,"1,2,3,4",https://schema.org/Recipe,causes,https://schema.org/Hypertension,causes,yes,"4 paraphrases of the same causal fact; a convergent system emits ONE causes-predicate edge Recipe->Hypertension for all four"
+C2,exercise supports type-2 diabetes management,"5,6,7,8",https://schema.org/PhysicalActivity,supports,https://schema.org/Type2Diabetes,supports,yes,"4 paraphrases; convergent system reuses one supports edge PhysicalActivity->Type2Diabetes rather than minting supportsDiabetesManagement variants"
+C3,job posting requires statistics course,"9,10,11,12",https://schema.org/JobPosting,requires,https://schema.org/Course,requires,yes,"4 paraphrases; one requires edge JobPosting->Course"
+C4,restrictive diet causes nutrient deficiency,"13,14,15,16",https://schema.org/Diet,causes,https://schema.org/NutrientDeficiencyDisorder,causes,yes,"4 paraphrases; one causes edge Diet->NutrientDeficiencyDisorder"
+C5,positive reviews support product sales,"17,18,19,20",https://schema.org/Review,supports,https://schema.org/Product,supports,yes,"4 paraphrases; one supports edge Review->Product (sales)"
+C6,astronomy negative control,"21",,,,,no,"unrelated to the ontology's health/commerce/education hotspots; a well-behaved arm should add NO edge here (hallucination check)"

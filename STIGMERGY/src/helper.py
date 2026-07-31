@@ -73,7 +73,7 @@ def _write_blackboard_items(blackboard_path, items):
 
 def _timestamped_sparql_log_path(log_dir=None) -> Path:
     if log_dir is None:
-        log_dir = Path("_raw_outputs/sparql_logs")
+        log_dir = config.run_output_dir() / "sparql_logs"
     log_dir = Path(log_dir)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     return log_dir / f"{timestamp}.txt"

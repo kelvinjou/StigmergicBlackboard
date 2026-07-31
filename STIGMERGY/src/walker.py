@@ -29,12 +29,13 @@ from src.walk_strategies import (
     RNG,
     _adjacent_walk,
     _direct_child_walk,
+    _hnsw_picks,
     _levy_jump,
     _pheromone_biased_walk,
     _starting_community,
 )
 
-BLACKBOARD_DIR = Path("_raw_outputs")
+BLACKBOARD_DIR = config.run_output_dir()
 
 EX = Namespace(config.ONTOLOGY_NAMESPACE_URI)
 
@@ -45,6 +46,31 @@ def _blackboard_path(evidence_index: int) -> Path:
 def _reset_blackboard(blackboard_path: Path):
     blackboard_path.parent.mkdir(parents=True, exist_ok=True)
     blackboard_path.write_text("", encoding="utf8")
+
+
+def _seed_blackboard_strengths(blackboard_path: Path, carried_strengths: dict[str, float]):
+    """Pre-load a fresh blackboard with tau carried over from prior evidence.
+
+    Used only when PHEROMONE_BLACKBOARD_PERSISTENCE is on. The blurb list stays
+    empty (blurbs are per-evidence so SPARQL generation and provenance remain
+    keyed to THIS evidence row), but the accumulated pheromone trail (tau) is
+    seeded so paraphrases of an already-seen concept reinforce the same
+    communities instead of re-exploring from scratch. This is what makes the run
+    stigmergic ACROSS evidence while keeping per-evidence output files intact.
+    """
+    if not carried_strengths:
+        return
+    items = {}
+    for community_id, strength in carried_strengths.items():
+        items[community_id] = {
+            "id": str(uuid.uuid4()),
+            "community_id": community_id,
+            "community": "",
+            "strength": strength,
+            "visits": {},
+            "blurb": [],
+        }
+    _write_blackboard_items(blackboard_path, items)
 
 
 def _decay_blackboard_strengths(blackboard_path: Path, decay=None):
@@ -209,13 +235,34 @@ def walk(trial_count=5, steps_per_trial=10):
         SUMMARY_EMBEDDING_CACHE_PATH.open("rb") as sum_embed
     ):
         summaries = pickle.load(sum_embed)
+        # tau carried across evidence rows when persistence is enabled (arm A3).
+        carried_strengths: dict[str, float] = {}
         for evidence_index, (evidence_text, evidence_embedding) in enumerate(zip(
             summaries["descriptions"],
             summaries["embeddings"]
         ), start=1):
             blackboard_path = _blackboard_path(evidence_index)
             _reset_blackboard(blackboard_path)
+            if config.PHEROMONE_BLACKBOARD_PERSISTENCE and carried_strengths:
+                # seed this evidence's board with the accumulated trail so
+                # paraphrases of an already-seen concept reinforce shared hotspots
+                _seed_blackboard_strengths(blackboard_path, carried_strengths)
             print(f"\nEvidence {evidence_index}: writing blackboard to {blackboard_path}")
+
+            # --- Arm A0: HNSW-top-k-only baseline -------------------------------
+            # No walk, no pheromone. Score + blurb only the communities HNSW
+            # landed on. If this matches the walking arms, the walk/blackboard
+            # add nothing for this ontology.
+            if not config.WALK_ENABLED:
+                for community in _hnsw_picks(evidence_embedding):
+                    _compare_similarity_at_walk(
+                        current_community=community,
+                        evidence_text=evidence_text,
+                        evidence_embedding=evidence_embedding,
+                        blackboard_path=blackboard_path,
+                        path_confidence=1.0,
+                    )
+                continue
 
             for trial in range(1, trial_count + 1):
                 _decay_blackboard_strengths(blackboard_path)
@@ -281,6 +328,10 @@ def walk(trial_count=5, steps_per_trial=10):
                     blackboard_path=blackboard_path,
                     path_confidence=config.PATH_CONFIDENCE_DECAY ** steps_per_trial,
                 )
+
+            # carry the trail forward to the next evidence row (arm A3 only)
+            if config.PHEROMONE_BLACKBOARD_PERSISTENCE:
+                carried_strengths = _blackboard_strengths(blackboard_path)
     
 if __name__ == "__main__":
     start = time.time()

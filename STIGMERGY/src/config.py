@@ -23,8 +23,30 @@ random walk (the "no-bias" ablation).
 # Switch these values when running against a different ontology.
 MAIN_ONTOLOGY = Path("/Users/kelvinjou/Downloads/schema_org.ttl")
 ONTOLOGY_FORMAT = "ttl"
+# For the convergence experiment, point this at the concept-clustered evidence
+# set: Path("_benchmarks/clustered_summary.txt"). See
+# _benchmarks/README_convergence_experiment.md.
 SUMMARY = Path("_raw_inputs/summary.txt")
-OUTPUT_ONTOLOGY = Path("_raw_outputs/modified_schema_org.ttl")
+
+# --- Experiment run routing -------------------------------------------------
+# Every arm of the stigmergy-vs-baseline benchmark writes to its own directory
+# under _raw_outputs/<RUN_TAG>/ so runs never overwrite each other and
+# delta_comparisons / convergence_metrics can diff any pair. Set this per arm
+# before launching walker.py, e.g. "a0_hnsw_only", "a1_no_phero",
+# "a2_stig_perev", "a3_stig_persist". Blackboards, the modified ontology, its
+# provenance sidecar, and SPARQL logs all land in this directory.
+RUN_TAG = "a3_stig_persist"
+RAW_OUTPUTS_ROOT = Path("_raw_outputs")
+
+
+def run_output_dir() -> Path:
+    """Directory holding this arm's blackboards + modified ontology."""
+    return RAW_OUTPUTS_ROOT / RUN_TAG
+
+
+# Kept as a module constant for backward compatibility; helper.py falls back to
+# this when no explicit output_path is passed. Points at the run-scoped file.
+OUTPUT_ONTOLOGY = RAW_OUTPUTS_ROOT / RUN_TAG / "modified_schema_org.ttl"
 
 ONTOLOGY_EMBEDDING_CACHE_PATH = Path("_preprocessed/community_embeddings.pkl")
 ONTOLOGY_HNSW_INDEX_PATH = Path("_preprocessed/community_hnsw.bin")
@@ -93,6 +115,15 @@ def prompt_template_values() -> dict[str, str]:
 # False -> original fixed-weight strategy + uniform-random node (ablation).
 PHEROMONE_BIAS_ENABLED = True
 
+# --- Walk enable (arm A0: HNSW-top-k-only baseline) -------------------------
+# True  -> full stigmergic/random walk over the ontology graph (arms A1-A3).
+# False -> skip the trial/step walk entirely; score + blurb ONLY the HNSW
+#          top-k landed communities. This is the "we don't need the walk or the
+#          blackboard, HNSW top-k already covers the hotspots" baseline. When
+#          False, PHEROMONE_BIAS_ENABLED / PHEROMONE_BLACKBOARD_PERSISTENCE are
+#          irrelevant (no walk means no transition rule and no trail).
+WALK_ENABLED = True
+
 # ACO transition exponents.
 ALPHA = 1.0   # pheromone exponent: exploitation of the learned trail (tau).
 BETA = 2.0    # heuristic exponent: greediness toward embedding similarity (eta).
@@ -145,4 +176,15 @@ PATH_CONFIDENCE_DECAY = 0.9
 PHEROMONE_SPARQL_GENERATION_MINIMUM = 0.0
 
 NEW_EVIDENCE_PERSISTENCE = True
-# PHEROMONE_BLACKBOARD_PERSISTENCE = False
+
+# --- Cross-evidence pheromone persistence (arm A3) --------------------------
+# False -> blackboard is reset per evidence row (arms A1, A2). tau only
+#          reinforces within one evidence item's 3 trials; nothing carries over
+#          between evidence items, so paraphrases of the same concept cannot
+#          reinforce a shared trail.
+# True  -> ONE shared blackboard for the whole run. tau accumulates ACROSS
+#          evidence rows (as config's module docstring describes), so a cluster
+#          of paraphrases reinforces the same communities and the walk converges
+#          on shared hotspots instead of re-exploring per evidence. This is the
+#          arm that actually tests whether stigmergy beats a stateless top-k.
+PHEROMONE_BLACKBOARD_PERSISTENCE = True
